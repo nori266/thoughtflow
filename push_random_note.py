@@ -8,10 +8,10 @@ Basic functionality:
 import pandas as pd
 
 RELEVANT_FILES = [
-    "thoughts.csv",
-    "thoughts_with_eta.csv",
-    "thoughts_from_work.csv",
-    "thoughts_with_all_fields.csv",
+    "data/thoughts.csv",
+    "data/thoughts_with_eta.csv",
+    "data/thoughts_from_work.csv",
+    "data/thoughts_with_all_fields.csv",
 ]
 
 
