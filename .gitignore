@@ -132,3 +132,6 @@ dmypy.json
 
 # data
 data/
+
+# notes
+feature_plan.md
