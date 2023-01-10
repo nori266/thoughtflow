@@ -37,11 +37,14 @@ def get_random_note():
             database="thoughtflow",
         ) as db_connection:
             create_table_query = f"""
-            SELECT thought, class, urgency, eta FROM thoughts WHERE status = "open"
+            SELECT thought, class, urgency, eta FROM thoughts
+            WHERE status = 'open'
+            ORDER BY RAND()
+            LIMIT 1
             """
             with db_connection.cursor() as cursor:
                 cursor.execute(create_table_query)
-                return cursor.fetchall()
+                return cursor.fetchone()
     except Error as e:
         print(e)
 
