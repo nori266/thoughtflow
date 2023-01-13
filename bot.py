@@ -3,6 +3,7 @@ from os import environ
 from dotenv import load_dotenv
 import telebot
 
+from bert_clf import model
 import db_operations as db
 
 
@@ -21,6 +22,8 @@ itembtn3 = telebot.types.KeyboardButton('Not relevant')
 markup.add(itembtn1, itembtn2, itembtn3)
 
 db_connection = db.get_connection()
+
+print(model.config)
 
 
 @bot.message_handler(commands=['note'])
