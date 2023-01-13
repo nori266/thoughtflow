@@ -20,12 +20,14 @@ itembtn2 = telebot.types.KeyboardButton('Working on it')
 itembtn3 = telebot.types.KeyboardButton('Not relevant')
 markup.add(itembtn1, itembtn2, itembtn3)
 
+db_connection = db.get_connection()
 
-@bot.message_handler(commands=['start'])
+
+@bot.message_handler(commands=['note'])
 def send_random_note(message):
     user = message.from_user
     if user.username == ADMIN_USERNAME:
-        thought = db.get_random_note()
+        thought = db.get_random_note(db_connection)
         bot.send_message(
             user.id,
             f"Random thought from your pull: \n{thought}",
