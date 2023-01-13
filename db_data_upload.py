@@ -1,63 +1,42 @@
 import csv
-from getpass import getpass
-from os import environ
 
 from dotenv import load_dotenv
-from mysql.connector import connect, Error
+from sqlite3 import Error
+
+import db_operations as db
 
 
 load_dotenv()
 
 
-def create_database(connection):
-    create_db_query = "CREATE DATABASE IF NOT EXISTS thoughtflow"
-    with connection.cursor() as cursor:
-        cursor.execute(create_db_query)
-
-
-def insert_data_from_csv(connection, table_name, csv_file):
+def insert_data_from_csv(cursor, table_name, csv_file):
     with open(csv_file, "r") as f:
         csv_data = csv.reader(f)
         print(next(csv_data))
-
-        with connection.cursor() as cursor:
-            print("Inserting data...")
-            for row in csv_data:
-                print(row)
-                # insert data into the table
-                cursor.execute(f"INSERT INTO {table_name} (thought, class, urgency, status, eta, date_created) "
-                               f"VALUES (%s, %s, %s, %s, %s, %s)", row[:-1])
-        connection.commit()
+        for row in csv_data:
+            print(row)
+            values = str(row[:5]).strip("[]")
+            # insert data into the table
+            cursor.execute(f"INSERT INTO {table_name} (thought, class, urgency, status, eta) VALUES ({values})")
+            print("Data inserted successfully")
 
 
 def create_table_from_csv(connection, table_name, csv_file):
-    create_table_query = f"""
-    CREATE TABLE IF NOT EXISTS {table_name} (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        thought TEXT,
-        class VARCHAR(255),
-        urgency VARCHAR(255),
-        status VARCHAR(255),
-        eta FLOAT,
-        date_created DATETIME DEFAULT CURRENT_TIMESTAMP,
-        date_completed DATETIME DEFAULT NULL
-    )
-    """
-    with connection.cursor() as cursor:
-        cursor.execute(create_table_query)
-    insert_data_from_csv(connection, table_name, csv_file)
+    # create a table in the database and insert data from csv file
+    try:
+        cursor = connection.cursor()
+        cursor.execute(f"CREATE TABLE IF NOT EXISTS {table_name} ("
+                       f"thought VARCHAR(255) NOT NULL, "
+                       f"class VARCHAR(255) NOT NULL, "
+                        f"urgency VARCHAR(255), "
+                        f"status VARCHAR(255), "
+                        f"eta VARCHAR(255))")
+        insert_data_from_csv(cursor, table_name, csv_file)
+        connection.commit()
+    except Error as e:
+        print(e)
 
 
 if __name__ == '__main__':
-    user = environ.get('DB_USER')
-    password = environ.get('DB_PASSWORD')
-    try:
-        with connect(
-            host="localhost",
-            user=user,
-            password=password,
-            database="thoughtflow",
-        ) as db_connection:
-            create_table_from_csv(db_connection, "thoughts", "data/thoughts_with_all_fields.csv")
-    except Error as e:
-        print(e)
+    with db.get_connection() as connection:
+        create_table_from_csv(connection, "thoughts", "data/my_showcase_data.csv")

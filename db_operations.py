@@ -1,67 +1,56 @@
-from os import environ
-
 from dotenv import load_dotenv
-from mysql.connector import connect, Error
+from sqlite3 import connect, Error
 
 
-load_dotenv()
-user = environ.get('DB_USER')
-password = environ.get('DB_PASSWORD')
-
-
-def add_thought(thought, class_, urgency, eta):
+def get_connection():
+    load_dotenv()
+    # connect to sqlite3 database
     try:
-        with connect(
-            host="localhost",
-            user=user,
-            password=password,
-            database="thoughtflow",
-        ) as db_connection:
-            create_table_query = f"""
-            INSERT INTO thoughts (thought, class, urgency, eta)
-            VALUES (%s, %s, %s, %s)
-            """
-            with db_connection.cursor() as cursor:
-                cursor.execute(create_table_query, (thought, class_, urgency, eta))
-            db_connection.commit()
+        connection = connect("thoughtflow.db", check_same_thread=False)
+        print("Connection to SQLite DB successful")
+        return connection
+    except Error as e:
+        print(f"The error '{e}' occurred")
+        return None
+
+
+def add_thought(connection, thought, class_, urgency, eta):
+    # using sqlite3 connect add a thought to the database
+    try:
+        create_table_query = f"""
+        INSERT INTO thoughts (thought, class, urgency, eta)
+        VALUES (%s, %s, %s, %s)
+        """
+        cursor = connection.cursor()
+        cursor.execute(create_table_query, (thought, class_, urgency, eta))
+        connection.commit()
     except Error as e:
         print(e)
 
 
-def get_random_note():
+def get_random_note(connection):
+    # using sqlite3 connect add a thought to the database
     try:
-        with connect(
-            host="localhost",
-            user=user,
-            password=password,
-            database="thoughtflow",
-        ) as db_connection:
-            create_table_query = f"""
-            SELECT thought, class, urgency, eta FROM thoughts
-            WHERE status = 'open'
-            ORDER BY RAND()
-            LIMIT 1
-            """
-            with db_connection.cursor() as cursor:
-                cursor.execute(create_table_query)
-                return cursor.fetchone()
+        create_table_query = f"""
+        SELECT * FROM thoughts ORDER BY RANDOM() LIMIT 1
+        """
+        cursor = connection.cursor()
+        cursor.execute(create_table_query)
+        return cursor.fetchone()
     except Error as e:
         print(e)
 
 
-def update_status(thought, status):
+def update_status(connection, thought, status):
+    # update the status of a thought
     try:
-        with connect(
-            host="localhost",
-            user=user,
-            password=password,
-            database="thoughtflow",
-        ) as db_connection:
-            create_table_query = f"""
-            UPDATE thoughts SET status = %s WHERE thought = %s
-            """
-            with db_connection.cursor() as cursor:
-                cursor.execute(create_table_query, (status, thought))
-            db_connection.commit()
+        query = f"""
+        UPDATE thoughts
+        SET status = %s
+        WHERE thought = %s
+        """
+        cursor = connection.cursor()
+        cursor.execute(query, (status, thought))
+        connection.commit()
     except Error as e:
         print(e)
