@@ -25,13 +25,27 @@ def create_table_from_csv(connection, table_name, csv_file):
     # create a table in the database and insert data from csv file
     try:
         cursor = connection.cursor()
-        cursor.execute(f"CREATE TABLE IF NOT EXISTS {table_name} ("
-                       f"thought VARCHAR(255) NOT NULL, "
-                       f"class VARCHAR(255) NOT NULL, "
-                        f"urgency VARCHAR(255), "
-                        f"status VARCHAR(255), "
-                        f"eta VARCHAR(255))")
+        cursor.execute(
+            f"CREATE TABLE IF NOT EXISTS {table_name} ("
+            f"id INTEGER PRIMARY KEY, "
+            f"thought TEXT, "
+            f"class TEXT, "
+            f"urgency TEXT, "
+            f"status TEXT, "
+            f"eta TEXT"
+            f")"
+        )
         insert_data_from_csv(cursor, table_name, csv_file)
+        connection.commit()
+    except Error as e:
+        print(e)
+
+
+def drop_table(connection, table_name):
+    # drop a table from the database
+    try:
+        cursor = connection.cursor()
+        cursor.execute(f"DROP TABLE {table_name}")
         connection.commit()
     except Error as e:
         print(e)
@@ -40,3 +54,4 @@ def create_table_from_csv(connection, table_name, csv_file):
 if __name__ == '__main__':
     with db.get_connection() as connection:
         create_table_from_csv(connection, "thoughts", "data/my_showcase_data.csv")
+        # drop_table(connection, "thoughts")

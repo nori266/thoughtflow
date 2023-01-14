@@ -27,7 +27,7 @@ default_prompt = "Please use /new command to add new thought to your pull " \
                  "or /note to get a random thought from your pull."
 
 
-@bot.message_handler(commands=['note'])
+@bot.message_handler(commands=['random'])
 def send_random_note(message):
     user = message.from_user
     if user.username == ADMIN_USERNAME:
@@ -64,12 +64,16 @@ def add_new_note(message):
 @bot.message_handler(content_types=['text'])
 def get_text_messages(message):
     user = message.from_user
+    default_class = 'todo'
+    default_priority = 'week'
+    default_eta = 1
     if user.username == ADMIN_USERNAME:
         if add_new_command_state:
-            db.add_thought(db_connection, message.text, 'todo', 'week', 1)
+            db.add_thought(db_connection, message.text, default_class, default_priority, 1)
             bot.send_message(
                 user.id,
-                f"New thought added to your pull.",
+                f"New thought added to your pull with a label \"{default_class}\" and priority \"{default_priority}\"."
+                f" ETA is {default_eta} hour.",
             )
         else:
             bot.send_message(

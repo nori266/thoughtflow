@@ -17,12 +17,12 @@ def get_connection():
 def add_thought(connection, thought, class_, urgency, eta):
     # using sqlite3 connect add a thought to the database
     try:
-        create_table_query = f"""
-        INSERT INTO thoughts (thought, class, urgency, eta)
-        VALUES (%s, %s, %s, %s)
+        query = f"""
+            INSERT INTO thoughts (thought, class, urgency, status, eta)
+            VALUES ('{thought}', '{class_}', '{urgency}', 'open', '{eta}')
         """
         cursor = connection.cursor()
-        cursor.execute(create_table_query, (thought, class_, urgency, eta))
+        cursor.execute(query)
         connection.commit()
     except Error as e:
         print(e)
@@ -54,3 +54,21 @@ def update_status(connection, thought, status):
         connection.commit()
     except Error as e:
         print(e)
+
+
+def show_last_5(connection):
+    # show the last 5 thoughts
+    try:
+        query = f"""
+        SELECT * FROM thoughts ORDER BY id DESC LIMIT 5
+        """
+        cursor = connection.cursor()
+        cursor.execute(query)
+        return cursor.fetchall()
+    except Error as e:
+        print(e)
+
+
+if __name__ == '__main__':
+    with get_connection() as connection:
+        print(show_last_5(connection))
