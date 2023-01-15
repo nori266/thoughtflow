@@ -22,7 +22,8 @@ markup.add(itembtn1, itembtn2, itembtn3)
 
 db_connection = db.get_connection()
 
-add_new_command_state = False
+# now it's always true, probably some handlers can block adding new notes
+add_new_command_state = True
 default_prompt = "Please use /new command to add new thought to your pull " \
                  "or /note to get a random thought from your pull."
 
