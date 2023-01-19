@@ -133,5 +133,8 @@ dmypy.json
 # data
 data/
 
+# jupyter notebooks
+notebooks/
+
 # notes
 feature_plan.md
