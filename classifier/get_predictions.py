@@ -54,7 +54,9 @@ def main(config: configparser.ConfigParser):
     best_scores, y_pred = probabilities.topk(1, dim=1)
     best_scores = best_scores.detach().numpy().squeeze()
     predictions = encoder.inverse_transform(y_pred)
-    print(predictions)
+    file_out = config['FILE']['predict_out']
+    out_df = pd.DataFrame({'thought': texts, 'class': labels, 'prediction': predictions, 'score': best_scores})
+    out_df.to_csv(file_out, index=False)
 
 
 if __name__ == '__main__':
