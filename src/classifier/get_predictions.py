@@ -56,6 +56,7 @@ def main(config: configparser.ConfigParser):
     predictions = encoder.inverse_transform(y_pred)
     file_out = config['FILE']['predict_out']
     out_df = pd.DataFrame({'thought': texts, 'class': labels, 'prediction': predictions, 'score': best_scores})
+    print("Accuracy:", accuracy_score(labels, predictions))
     out_df.to_csv(file_out, index=False)
 
 
