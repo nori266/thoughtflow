@@ -1,6 +1,4 @@
-# using sqlalchemy rewrite database operations from the file db_operations_sqlite.py
-
-from sqlalchemy import create_engine, Column, Integer, String, MetaData, Table, Float, DateTime, Boolean
+from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Boolean
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from dotenv import load_dotenv
@@ -15,28 +13,30 @@ Base = declarative_base()
 class Thoughts(Base):
     __tablename__ = 'thoughts'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    thought = Column(String)
-    class_ = Column(String)
-    urgency = Column(String)
-    status = Column(String)
-    eta = Column(Float)
+    thought = Column(String(255))
+    label = Column(String(32))
+    urgency = Column(String(16))
+    status = Column(String(16))
+    eta = Column(Float(2))
     date_created = Column(DateTime)
     data_completed = Column(DateTime)
 
     def __repr__(self):
-        return f"<Thoughts(thought={self.thought}, class_={self.class_}, urgency={self.urgency}, status={self.status}, eta={self.eta}, date_created={self.date_created}, data_completed={self.data_completed})>"
+        return f"<Thoughts(thought={self.thought}, label={self.label}, urgency={self.urgency}, status={self.status}, " \
+               f"eta={self.eta}, date_created={self.date_created}, data_completed={self.data_completed})>"
 
 
 class Users(Base):
     __tablename__ = 'users'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    username = Column(String)
-    password = Column(String)
-    email = Column(String)
+    username = Column(String(64))
+    password = Column(String(64))
+    email = Column(String(64))
     is_admin = Column(Boolean)
 
     def __repr__(self):
-        return f"<Users(username={self.username}, password={self.password}, email={self.email}, is_admin={self.is_admin})>"
+        return f"<Users(username={self.username}, password={self.password}, email={self.email}, " \
+               f"is_admin={self.is_admin})>"
 
 
 def get_connection():
@@ -45,9 +45,9 @@ def get_connection():
         url,
         connect_args=dict(host=os.getenv("DB_HOST"), port=3306)
     )
-    connection = engine.connect()
-    # TODO do I need to create a session?
-    return connection
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    return session
 
 
 def create_table(connection):
@@ -58,12 +58,12 @@ def drop_table(connection):
     Base.metadata.drop_all(connection.bind)
 
 
-def add_thought(connection, thought, class_, urgency, eta):
+def add_thought(connection, thought, label, urgency, eta):
     # using sqlalchemy connect add a thought to the database
     try:
         query = f"""
-            INSERT INTO thoughts (thought, class, urgency, status, eta)
-            VALUES ('{thought}', '{class_}', '{urgency}', 'open', '{eta}')
+            INSERT INTO thoughts (thought, label, urgency, status, eta)
+            VALUES ('{thought}', '{label}', '{urgency}', 'open', '{eta}')
         """
         result = connection.execute(query)
         return result
@@ -86,13 +86,8 @@ def get_random_note(connection):
 def update_status(connection, thought, status):
     # update the status of a thought
     try:
-        query = f"""
-        UPDATE thoughts
-        SET status = %s
-        WHERE thought = %s
-        """
-        result = connection.execute(query, (status, thought))
-        return result
+        connection.query(Thoughts).filter(Thoughts.thought == thought).update({Thoughts.status: status})
+        connection.commit()
     except Exception as e:
         print(e)
 
@@ -136,11 +131,11 @@ def get_user(connection, username):
 
 if __name__ == '__main__':
     connection = get_connection()
-    # create_table(connection)
     # drop_table(connection)
-    # add_thought(connection, 'test', 'test', 'test', 1)
-    print(get_random_note(connection))
-    # update_status(connection, 'test', 'test')
-    # show_last_5(connection)
+    create_table(connection)
+    add_thought(connection, 'test', 'test', 'test', 1)
+    # print(get_random_note(connection))
+    update_status(connection, 'test', 'updated')
+    print(show_last_5(connection))
     # add_user(connection
     # get_user(connection, 'test')
