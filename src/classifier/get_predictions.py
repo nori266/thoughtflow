@@ -1,5 +1,6 @@
-import configparser
 import argparse
+import configparser
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -35,13 +36,13 @@ def main(config: configparser.ConfigParser):
     texts = data["thought"].tolist()
     labels = data[label_column].tolist()
 
-    encoder = LabelEncoder()
-    encoder.classes_ = np.load('label_encoding.npy')
-    print(encoder.classes_, len(encoder.classes_))
-
-    trained_model = config['FILE']['trained_model']
+    trained_model = Path(config['FILE']['trained_model'])
     base_model_path = config['FILE']['base_model']
     max_seq_length = int(config['PARAM']['max_seq_length'])
+
+    encoder = LabelEncoder()
+    encoder.classes_ = np.load((trained_model / 'label_encoding.npy').as_posix())
+    print(encoder.classes_, len(encoder.classes_))
 
     tokenizer = BertTokenizer.from_pretrained(base_model_path)
     model = BertForSequenceClassification.from_pretrained(trained_model)

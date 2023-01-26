@@ -1,5 +1,6 @@
 import argparse
 import configparser
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -15,9 +16,6 @@ from dataset import ThoughtDataset
 Fine-tuning BERT for text classification with the data from the csv file.
 """
 
-# model.save_pretrained('models/bert-base-uncased')
-# tokenizer.save_pretrained('models/bert-base-uncased')
-
 
 def calculate_metrics(eval_pred):
     predictions, labels = eval_pred
@@ -31,7 +29,7 @@ def main(config: configparser.ConfigParser):
     # data = db.get_class_train_data()
     train_data = shuffle(pd.read_csv(config['FILE']['train_data']))
     test_data = shuffle(pd.read_csv(config['FILE']['test_data']))
-    model_out_path = config['FILE']['model_out']
+    model_out_path = Path(config['FILE']['model_out'])
     base_model_path = config['FILE']['base_model']
 
     if config.has_option("PARAM", "label_column"):
@@ -49,7 +47,7 @@ def main(config: configparser.ConfigParser):
     train_labels_bin = le.fit_transform(train_labels)
     # save the label encoder
 
-    np.save('label_encoding.npy', le.classes_)
+    np.save((model_out_path / 'label_encoding.npy').as_posix(), le.classes_)
     test_labels_bin = le.transform(test_labels)
     num_labels = len(le.classes_)
 
@@ -69,7 +67,7 @@ def main(config: configparser.ConfigParser):
     test_dataset = ThoughtDataset(test_encodings, test_labels_bin)
 
     training_args = TrainingArguments(
-        output_dir=model_out_path,                  # output directory
+        output_dir=model_out_path.as_posix(),                  # output directory
         num_train_epochs=epochs,                    # total # of training epochs
         per_device_train_batch_size=batch_size,     # batch size per device during training
         per_device_eval_batch_size=batch_size,      # batch size for evaluation
