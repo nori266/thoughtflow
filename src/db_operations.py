@@ -1,9 +1,12 @@
-from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Boolean
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.sql.expression import func
-from dotenv import load_dotenv
+import datetime
 import os
+
+from dotenv import load_dotenv
+import pandas as pd
+from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Boolean
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.sql.expression import func
 
 load_dotenv()
 
@@ -20,12 +23,21 @@ class Thought(Base):
     status = Column(String(16))
     eta = Column(Float(2))
     date_created = Column(DateTime)
-    data_completed = Column(DateTime)
+    date_completed = Column(DateTime)
 
     def __repr__(self):
-        # TODO pretty print (with columns)
-        return f"<Thought(thought={self.thought}, label={self.label}, urgency={self.urgency}, status={self.status}, " \
-               f"eta={self.eta}, date_created={self.date_created}, data_completed={self.data_completed})>"
+        # return f"<Thought(thought={self.thought}, label={self.label}, urgency={self.urgency}, status={self.status}, " \
+        #        f"eta={self.eta}, date_created={self.date_created}, date_completed={self.date_completed})>"
+        thought_col_len = 40
+        if len(self.thought) > thought_col_len:
+            thought = self.thought[:thought_col_len]
+        else:
+            pad_len = thought_col_len - len(self.thought)
+            thought = self.thought + " " * pad_len
+
+        # TODO padding for all columns
+        return f"{thought}\t{self.label}\t\t\t{self.urgency}\t{self.status}\t{self.eta}\t{self.date_created}\t" \
+               f"{self.date_completed}"
 
 
 class User(Base):
@@ -62,9 +74,19 @@ class DB_DML:
     def __init__(self, session):
         self.session = session
 
-    def add_thought(self, thought, label, urgency, eta):
+    def add_thought(self, thought, label, urgency, status, eta, date_created=None, date_completed=None):
         try:
-            thought = Thought(thought=thought, label=label, urgency=urgency, eta=eta)
+            if date_created is None:
+                date_created = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            thought = Thought(
+                thought=thought,
+                label=label,
+                urgency=urgency,
+                status=status,
+                eta=eta,
+                date_created=date_created,
+                date_completed=date_completed
+            )
             self.session.add(thought)
             self.session.commit()
         except Exception as e:
@@ -81,6 +103,23 @@ class DB_DML:
         try:
             self.session.query(Thought).filter(Thought.thought == thought).update({Thought.status: status})
             self.session.commit()
+        except Exception as e:
+            print(e)
+
+    def add_thoughts_from_csv(self, csv_file):
+        try:
+            df = pd.read_csv(csv_file, na_values='none')[:10]
+            df = df.where(pd.notnull(df), None)  # replace NaN with None
+            for _, row in df.iterrows():
+                self.add_thought(
+                    row['thought'],
+                    row['label'],
+                    row['urgency'],
+                    row['status'],
+                    row['eta'],
+                    row['date_created'],
+                    row['date_completed']
+                )
         except Exception as e:
             print(e)
 
@@ -125,9 +164,7 @@ if __name__ == '__main__':
     db_dml = DB_DML(my_session)
     db_ddl.drop_all_tables()
     db_ddl.create_all_tables()
-    db_dml.add_thought('test', 'test', 'test', 1)
-    db_dml.add_thought('test2', 'test2', 'test2', 1)
-    db_dml.update_thought_status('test', 'done')
+    db_dml.add_thoughts_from_csv('data/all_thoughts.csv')
     last_5 = db_dml.show_last_5()
-    for thought in last_5:
-        print(thought)
+    for note in last_5:
+        print(note)
