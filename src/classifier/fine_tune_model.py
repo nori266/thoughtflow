@@ -32,10 +32,12 @@ def main(config: configparser.ConfigParser):
     model_out_path = Path(config['FILE']['model_out'])
     base_model_path = config['FILE']['base_model']
 
+    model_out_path.mkdir(parents=True, exist_ok=True)
+
     if config.has_option("PARAM", "label_column"):
         label_column = config["PARAM"]["label_column"]
     else:
-        label_column = "class"
+        label_column = "label"
 
     train_texts = train_data["thought"].tolist()
     test_texts = test_data["thought"].tolist()
