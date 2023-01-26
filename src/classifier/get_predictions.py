@@ -30,7 +30,7 @@ def main(config: configparser.ConfigParser):
     if config.has_option("PARAM", "label_column"):
         label_column = config["PARAM"]["label_column"]
     else:
-        label_column = "class"
+        label_column = "label"
 
     data = pd.read_csv(config['FILE']['test_data'])
     texts = data["thought"].tolist()
@@ -41,7 +41,7 @@ def main(config: configparser.ConfigParser):
     max_seq_length = int(config['PARAM']['max_seq_length'])
 
     encoder = LabelEncoder()
-    encoder.classes_ = np.load((trained_model / 'label_encoding.npy').as_posix())
+    encoder.classes_ = np.load((trained_model.parent / 'label_encoding.npy').as_posix())
     print(encoder.classes_, len(encoder.classes_))
 
     tokenizer = BertTokenizer.from_pretrained(base_model_path)
@@ -56,7 +56,7 @@ def main(config: configparser.ConfigParser):
     best_scores = best_scores.detach().numpy().squeeze()
     predictions = encoder.inverse_transform(y_pred)
     file_out = config['FILE']['predict_out']
-    out_df = pd.DataFrame({'thought': texts, 'class': labels, 'prediction': predictions, 'score': best_scores})
+    out_df = pd.DataFrame({'thought': texts, 'label': labels, 'prediction': predictions, 'score': best_scores})
     print("Accuracy:", accuracy_score(labels, predictions))
     out_df.to_csv(file_out, index=False)
 
