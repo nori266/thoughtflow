@@ -1,5 +1,5 @@
-import datetime
 import os
+from tqdm import tqdm
 
 from dotenv import load_dotenv
 import pandas as pd
@@ -17,11 +17,11 @@ Base = declarative_base()
 class Thought(Base):
     __tablename__ = 'thought'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    thought = Column(String(255))
+    thought = Column(String(512))
     label = Column(String(32))
     urgency = Column(String(16))
     status = Column(String(16))
-    eta = Column(Float(2))
+    eta = Column(Float(2), default=0.5)
     date_created = Column(DateTime)
     date_completed = Column(DateTime)
 
@@ -74,10 +74,8 @@ class DB_DML:
     def __init__(self, session):
         self.session = session
 
-    def add_thought(self, thought, label, urgency, status, eta, date_created=None, date_completed=None):
+    def add_thought(self, thought, label, urgency, status, eta, date_created, date_completed=None):
         try:
-            if date_created is None:
-                date_created = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             thought = Thought(
                 thought=thought,
                 label=label,
@@ -108,9 +106,11 @@ class DB_DML:
 
     def add_thoughts_from_csv(self, csv_file):
         try:
-            df = pd.read_csv(csv_file, na_values='none')[:10]
-            df = df.where(pd.notnull(df), None)  # replace NaN with None
-            for _, row in df.iterrows():
+            df = pd.read_csv(csv_file, na_values='none')
+            # replace Nan with None
+            df = df.where(pd.notnull(df), None)
+            df['eta'].fillna(0.5, inplace=True)
+            for _, row in tqdm(df.iterrows(), total=len(df)):
                 self.add_thought(
                     row['thought'],
                     row['label'],
@@ -125,7 +125,7 @@ class DB_DML:
 
     def show_last_5(self):
         try:
-            thoughts = self.session.query(Thought).order_by(Thought.id.desc()).limit(5).all()
+            thoughts = self.session.query(Thought).order_by(Thought.id.desc()).limit(10).all()
             return thoughts
         except Exception as e:
             print(e)
@@ -164,7 +164,7 @@ if __name__ == '__main__':
     db_dml = DB_DML(my_session)
     db_ddl.drop_all_tables()
     db_ddl.create_all_tables()
-    db_dml.add_thoughts_from_csv('data/all_thoughts.csv')
+    db_dml.add_thoughts_from_csv('data/all_thoughts_date_filled.csv')
     last_5 = db_dml.show_last_5()
     for note in last_5:
         print(note)
