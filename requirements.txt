@@ -1,5 +1,6 @@
 mysql-connector-python==8.0.31
 pandas==1.5.2
+protobuf==3.20.1
 pytelegrambotapi==4.9.0
 python-dotenv==0.21.0
 SQLAlchemy==1.4.46
