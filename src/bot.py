@@ -20,7 +20,7 @@ itembtn2 = telebot.types.KeyboardButton('Working on it')
 itembtn3 = telebot.types.KeyboardButton('Not relevant')
 markup.add(itembtn1, itembtn2, itembtn3)
 
-db_connection = db.get_connection()
+# db_connection = db.get_connection()
 
 # now it's always true, probably some handlers can block adding new notes
 add_new_command_state = True
@@ -32,7 +32,8 @@ default_prompt = "Please use /new command to add new thought to your pull " \
 def send_random_note(message):
     user = message.from_user
     if user.username == ADMIN_USERNAME:
-        thought = db.get_random_note(db_connection)
+        # thought = db.get_random_note(db_connection)
+        thought = "test"
         bot.send_message(
             user.id,
             f"Random thought from your pull: \n{thought}",
@@ -70,7 +71,7 @@ def get_text_messages(message):
     default_eta = 1
     if user.username == ADMIN_USERNAME:
         if add_new_command_state:
-            db.add_thought(db_connection, message.text, default_class, default_priority, 1)
+            # db.add_thought(db_connection, message.text, default_class, default_priority, 1)
             bot.send_message(
                 user.id,
                 f"New thought added to your pull with a label \"{default_class}\" and priority \"{default_priority}\"."
