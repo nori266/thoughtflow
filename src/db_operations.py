@@ -162,9 +162,9 @@ if __name__ == '__main__':
     my_session = get_session()
     db_ddl = DB_DDL(my_session)
     db_dml = DB_DML(my_session)
-    db_ddl.drop_all_tables()
-    db_ddl.create_all_tables()
-    db_dml.add_thoughts_from_csv('data/all_thoughts_date_filled.csv')
+    # db_ddl.drop_all_tables()
+    # db_ddl.create_all_tables()
+    # db_dml.add_thoughts_from_csv('data/all_thoughts_date_filled.csv')
     last_5 = db_dml.show_last_5()
     for note in last_5:
         print(note)
