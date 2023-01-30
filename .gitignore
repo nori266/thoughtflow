@@ -133,6 +133,9 @@ dmypy.json
 # data
 data/
 
+# models
+models/
+
 # jupyter notebooks
 notebooks/
 
