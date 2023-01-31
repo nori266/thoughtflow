@@ -170,5 +170,7 @@ if __name__ == '__main__':
     # db_ddl.create_all_tables()
     # db_dml.add_thoughts_from_csv('data/all_thoughts_date_filled.csv')
     last_5 = db_dml.show_last_5()
+    logger.debug("Last 5 thoughts:")
     for line in pformat(last_5).split('\n'):
-        logging.debug(line)
+        logger.debug(line)
+    logger.warning("Done")
