@@ -1,4 +1,6 @@
+import logging
 import os
+from pprint import pformat
 from tqdm import tqdm
 
 from dotenv import load_dotenv
@@ -10,6 +12,8 @@ from sqlalchemy.sql.expression import func
 
 load_dotenv()
 
+logger = logging.getLogger(__name__)
+logging.basicConfig(level = logging.DEBUG)
 
 Base = declarative_base()
 
@@ -166,5 +170,5 @@ if __name__ == '__main__':
     # db_ddl.create_all_tables()
     # db_dml.add_thoughts_from_csv('data/all_thoughts_date_filled.csv')
     last_5 = db_dml.show_last_5()
-    for note in last_5:
-        print(note)
+    for line in pformat(last_5).split('\n'):
+        logging.debug(line)
