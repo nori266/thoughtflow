@@ -3,6 +3,7 @@ from os import environ
 from dotenv import load_dotenv
 import telebot
 
+from classifier.bert_classifier import BertClassifier
 import db_operations as db
 
 
@@ -27,6 +28,8 @@ add_new_command_state = True
 default_prompt = "Please use /new command to add new thought to your pull " \
                  "or /note to get a random thought from your pull."
 
+bert_clf = BertClassifier("models/fine_tuned_bert/230126_test_model/checkpoint-187")
+
 
 @bot.message_handler(commands=['random'])
 def send_random_note(message):
@@ -48,6 +51,7 @@ def send_random_note(message):
 
 @bot.message_handler(commands=['new'])
 def add_new_note(message):
+    # doesn't do anything but just invites to send a new note and sets the state to True
     user = message.from_user
     if user.username == ADMIN_USERNAME:
         global add_new_command_state
@@ -66,16 +70,19 @@ def add_new_note(message):
 @bot.message_handler(content_types=['text'])
 def get_text_messages(message):
     user = message.from_user
-    default_class = 'todo'
+    labels, score = bert_clf.predict([message.text])
+    label = labels[0]
+    # TODO: add logic to handle different labels
+    if label == 'relationships':
+        label = 'personal'
     default_priority = 'week'
-    default_eta = 1
     if user.username == ADMIN_USERNAME:
         if add_new_command_state:
             # db.add_thought(db_connection, message.text, default_class, default_priority, 1)
             bot.send_message(
                 user.id,
-                f"New thought added to your pull with a label \"{default_class}\" and priority \"{default_priority}\"."
-                f" ETA is {default_eta} hour.",
+                f"Added\nThought: \"{message.text}\"\nCategory: \"{label}\"\n"
+                # f"Priority: \"{default_priority}\"",
             )
         else:
             bot.send_message(
