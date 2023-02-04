@@ -3,6 +3,7 @@ mysql-connector-python==8.0.32
 pandas==1.5.2
 pytelegrambotapi==4.9.0
 python-dotenv==0.21.0
+scikit-learn==1.2.1
 SQLAlchemy==1.4.46
 torch==1.13.1
 transformers==4.25.1
