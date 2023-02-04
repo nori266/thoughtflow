@@ -96,7 +96,7 @@ class DB_DML:
 
     def get_random_note(self):
         try:
-            thought = self.session.query(Thought).filter(Thought.status == 'todo').order_by(func.random()).first()
+            thought = self.session.query(Thought).order_by(func.random()).first()
             return thought
         except Exception as e:
             print(e)

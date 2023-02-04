@@ -1,3 +1,4 @@
+from datetime import datetime
 from os import environ
 
 from dotenv import load_dotenv
@@ -21,7 +22,8 @@ itembtn2 = telebot.types.KeyboardButton('Working on it')
 itembtn3 = telebot.types.KeyboardButton('Not relevant')
 markup.add(itembtn1, itembtn2, itembtn3)
 
-# db_connection = db.get_connection()
+session = db.get_session()
+db_dml = db.DB_DML(session)
 
 # now it's always true, probably some handlers can block adding new notes
 add_new_command_state = True
@@ -35,8 +37,9 @@ bert_clf = BertClassifier("models/fine_tuned_bert/230126_test_model/checkpoint-1
 def send_random_note(message):
     user = message.from_user
     if user.username == ADMIN_USERNAME:
-        # thought = db.get_random_note(db_connection)
-        thought = "test"
+        thought = db_dml.get_random_note()
+        global add_new_command_state
+        add_new_command_state = False
         bot.send_message(
             user.id,
             f"Random thought from your pull: \n{thought}",
@@ -75,14 +78,23 @@ def get_text_messages(message):
     # TODO: add logic to handle different labels
     if label == 'relationships':
         label = 'personal'
-    default_priority = 'week'
+    default_urgency = 'week'
+    default_status = 'open'
+    default_eta = 0.5
+    date_created = datetime.now().strftime("%y%m%d %H:%M")
     if user.username == ADMIN_USERNAME:
         if add_new_command_state:
-            # db.add_thought(db_connection, message.text, default_class, default_priority, 1)
+            db_dml.add_thought(
+                message.text,
+                label,
+                default_urgency,
+                default_status,
+                default_eta,
+                date_created
+            )
             bot.send_message(
                 user.id,
                 f"Added\nThought: \"{message.text}\"\nCategory: \"{label}\"\n"
-                # f"Priority: \"{default_priority}\"",
             )
         else:
             bot.send_message(
