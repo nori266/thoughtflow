@@ -1,6 +1,5 @@
 import logging
 import os
-from pprint import pformat
 from tqdm import tqdm
 
 from dotenv import load_dotenv
@@ -172,21 +171,5 @@ def reload_data(csv_file):
 
 if __name__ == '__main__':
     # TODO provide script name with click or argparse
-    # TODO to unit test
-    my_session = get_session()
     # reload_data('data/all_thoughts_date_filled.csv')
-
-    db_dml = DB_DML(my_session)
-    db_dml.add_thought(
-        "answer Jaakko",
-        "career",
-        "asap",
-        "open",
-        0.5,
-    )
-    n = 10
-    last_5 = db_dml.show_last_n(n)
-    logger.debug(f"Last {n} thoughts:")
-    for line in pformat(last_5).split('\n'):
-        logger.debug(line)
-    logger.debug("Done")
+    pass
