@@ -91,21 +91,21 @@ class DB_DML:
             self.session.add(thought)
             self.session.commit()
         except Exception as e:
-            print(e)
+            logger.error(e)
 
     def get_random_note(self):
         try:
             thought = self.session.query(Thought).order_by(func.random()).first()
             return thought
         except Exception as e:
-            print(e)
+            logger.error(e)
 
     def update_thought_status(self, thought, status):
         try:
             self.session.query(Thought).filter(Thought.thought == thought).update({Thought.status: status})
             self.session.commit()
         except Exception as e:
-            print(e)
+            logger.error(e)
 
     def add_thoughts_from_csv(self, csv_file):
         try:
@@ -124,14 +124,14 @@ class DB_DML:
                     row['date_completed']
                 )
         except Exception as e:
-            print(e)
+            logger.error(e)
 
     def show_last_n(self, n=10):
         try:
             thoughts = self.session.query(Thought).order_by(Thought.id.desc()).limit(n).all()
             return thoughts
         except Exception as e:
-            print(e)
+            logger.error(e)
 
     def add_user(self, username, password, email, is_admin):
         try:
@@ -139,14 +139,14 @@ class DB_DML:
             self.session.add(user)
             self.session.commit()
         except Exception as e:
-            print(e)
+            logger.error(e)
 
     def get_user(self, username):
         try:
             user = self.session.query(User).filter(User.username == username).first()
             return user
         except Exception as e:
-            print(e)
+            logger.error(e)
 
 
 def get_session():
