@@ -26,7 +26,7 @@ class Thought(Base):
     urgency = Column(String(16))
     status = Column(String(16))
     eta = Column(Float(2), default=0.5)
-    date_created = Column(DateTime)
+    date_created = Column(DateTime, default=func.now())  # TODO test this
     date_completed = Column(DateTime)
 
     def __repr__(self):
@@ -78,7 +78,7 @@ class DB_DML:
     def __init__(self, session):
         self.session = session
 
-    def add_thought(self, thought, label, urgency, status, eta, date_created, date_completed=None):
+    def add_thought(self, thought, label, urgency, status, eta, date_created=None, date_completed=None):
         try:
             thought = Thought(
                 thought=thought,
@@ -127,9 +127,9 @@ class DB_DML:
         except Exception as e:
             print(e)
 
-    def show_last_5(self):
+    def show_last_n(self, n=10):
         try:
-            thoughts = self.session.query(Thought).order_by(Thought.id.desc()).limit(10).all()
+            thoughts = self.session.query(Thought).order_by(Thought.id.desc()).limit(n).all()
             return thoughts
         except Exception as e:
             print(e)
@@ -161,16 +161,32 @@ def get_session():
     return session
 
 
-if __name__ == '__main__':
-    # TODO to unit test
+def reload_data(csv_file):
     my_session = get_session()
     db_ddl = DB_DDL(my_session)
     db_dml = DB_DML(my_session)
-    # db_ddl.drop_all_tables()
-    # db_ddl.create_all_tables()
-    # db_dml.add_thoughts_from_csv('data/all_thoughts_date_filled.csv')
-    last_5 = db_dml.show_last_5()
-    logger.warning("Last 5 thoughts:")
+    db_ddl.drop_all_tables()
+    db_ddl.create_all_tables()
+    db_dml.add_thoughts_from_csv(csv_file)
+
+
+if __name__ == '__main__':
+    # TODO provide script name with click or argparse
+    # TODO to unit test
+    my_session = get_session()
+    # reload_data('data/all_thoughts_date_filled.csv')
+
+    db_dml = DB_DML(my_session)
+    db_dml.add_thought(
+        "answer Jaakko",
+        "career",
+        "asap",
+        "open",
+        0.5,
+    )
+    n = 10
+    last_5 = db_dml.show_last_n(n)
+    logger.debug(f"Last {n} thoughts:")
     for line in pformat(last_5).split('\n'):
-        logger.warning(line)
-    logger.warning("Done")
+        logger.debug(line)
+    logger.debug("Done")

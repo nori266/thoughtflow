@@ -81,7 +81,7 @@ def get_text_messages(message):
     default_urgency = 'week'
     default_status = 'open'
     default_eta = 0.5
-    date_created = datetime.now().strftime("%y%m%d %H:%M")
+
     if user.username == ADMIN_USERNAME:
         if add_new_command_state:
             db_dml.add_thought(
@@ -90,7 +90,6 @@ def get_text_messages(message):
                 default_urgency,
                 default_status,
                 default_eta,
-                date_created
             )
             bot.send_message(
                 user.id,
