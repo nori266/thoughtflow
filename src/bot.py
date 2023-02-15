@@ -1,7 +1,7 @@
-from datetime import datetime
 from os import environ
 
 from dotenv import load_dotenv
+import streamlit as st
 import telebot
 
 from classifier.bert_classifier import BertClassifier
@@ -30,7 +30,13 @@ add_new_command_state = True
 default_prompt = "Please use /new command to add new thought to your pull " \
                  "or /note to get a random thought from your pull."
 
-bert_clf = BertClassifier("models/fine_tuned_bert/230126_test_model/checkpoint-187")
+
+@st.cache
+def load_classifier():
+    return BertClassifier("models/fine_tuned_bert/230126_test_model/checkpoint-187")
+
+
+bert_clf = load_classifier()
 
 
 @bot.message_handler(commands=['random'])
@@ -39,6 +45,7 @@ def send_random_note(message):
     if user.username == ADMIN_USERNAME:
         thought = db_dml.get_random_note()
         global add_new_command_state
+        # it is considered that user will interact with the note somehow, so adding new notes is blocked
         add_new_command_state = False
         bot.send_message(
             user.id,
