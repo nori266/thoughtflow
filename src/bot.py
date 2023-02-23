@@ -14,21 +14,13 @@ ADMIN_USERNAME = environ.get('ADMIN_USERNAME')
 
 bot = telebot.TeleBot(TOKEN)
 
-markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
-itembtn1 = telebot.types.KeyboardButton('Send me later')
-# TODO if status Open, then 'working on it', if in_progress, then 'done'
-itembtn2 = telebot.types.KeyboardButton('Working on it')
-# itembtn2 = telebot.types.KeyboardButton('Done')
-itembtn3 = telebot.types.KeyboardButton('Not relevant')
-markup.add(itembtn1, itembtn2, itembtn3)
-
 session = db.get_session()
 db_dml = db.DB_DML(session)
 
 # now it's always true, probably some handlers can block adding new notes
 add_new_command_state = True
 default_prompt = "Please use /new command to add new thought to your pull " \
-                 "or /note to get a random thought from your pull."
+                 "or /random to get a random thought from your pull."
 
 
 @st.cache
@@ -37,6 +29,20 @@ def load_classifier():
 
 
 bert_clf = load_classifier()
+
+
+def get_markup(status):
+    if status == 'in_progress':
+        itembtn2 = telebot.types.KeyboardButton('Done')
+    else:
+        itembtn2 = telebot.types.KeyboardButton('Working on it')
+
+    markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
+    itembtn1 = telebot.types.KeyboardButton('Send me later')
+    itembtn3 = telebot.types.KeyboardButton('Not relevant')
+    itembtn4 = telebot.types.KeyboardButton('Edit category')
+    markup.add(itembtn1, itembtn2, itembtn3, itembtn4)
+    return markup
 
 
 @bot.message_handler(commands=['random'])
@@ -50,7 +56,7 @@ def send_random_note(message):
         bot.send_message(
             user.id,
             f"Random thought from your pull: \n{thought}",
-            reply_markup=markup
+            reply_markup=get_markup(thought.status),
         )
     else:
         bot.send_message(
