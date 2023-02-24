@@ -77,32 +77,32 @@ class DB_DML:
     def __init__(self, session):
         self.session = session
 
-    def add_thought(self, thought, label, urgency, status, eta, date_created=None, date_completed=None):
+    def add_thought(self, thought):
         try:
-            thought = Thought(
-                thought=thought,
-                label=label,
-                urgency=urgency,
-                status=status,
-                eta=eta,
-                date_created=date_created,
-                date_completed=date_completed
-            )
+            # thought = Thought(
+            #     thought=thought,
+            #     label=label,
+            #     urgency=urgency,
+            #     status=status,
+            #     eta=eta,
+            #     date_created=date_created,
+            #     date_completed=date_completed
+            # )
             self.session.add(thought)
             self.session.commit()
         except Exception as e:
             logger.error(e)
 
-    def get_random_note(self):
+    def get_random_note(self) -> Thought:
         try:
             thought = self.session.query(Thought).order_by(func.random()).first()
             return thought
         except Exception as e:
             logger.error(e)
 
-    def update_thought_status(self, thought, status):
+    def update_note_status(self, thought: Thought, status):
         try:
-            self.session.query(Thought).filter(Thought.thought == thought).update({Thought.status: status})
+            thought.status = status
             self.session.commit()
         except Exception as e:
             logger.error(e)
@@ -114,15 +114,25 @@ class DB_DML:
             df = df.where(pd.notnull(df), None)
             df['eta'].fillna(0.5, inplace=True)
             for _, row in tqdm(df.iterrows(), total=len(df)):
-                self.add_thought(
-                    row['thought'],
-                    row['label'],
-                    row['urgency'],
-                    row['status'],
-                    row['eta'],
-                    row['date_created'],
-                    row['date_completed']
+                thought = Thought(
+                    thought=row['thought'],
+                    label=row['label'],
+                    urgency=row['urgency'],
+                    status=row['status'],
+                    eta=row['eta'],
+                    date_created=row['date_created'],
+                    date_completed=row['date_completed']
                 )
+                self.session.add(thought)
+                # self.add_thought(
+                #     row['thought'],
+                #     row['label'],
+                #     row['urgency'],
+                #     row['status'],
+                #     row['eta'],
+                #     row['date_created'],
+                #     row['date_completed']
+                # )
         except Exception as e:
             logger.error(e)
 
