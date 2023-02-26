@@ -5,7 +5,8 @@ import streamlit as st
 import telebot
 
 from classifier.bert_classifier import BertClassifier
-import db_operations as db
+from db_action_handler import DBActionHandler
+from db_entities import Thought
 
 
 load_dotenv()
@@ -13,15 +14,15 @@ TOKEN = environ.get('TOKEN')
 ADMIN_USERNAME = environ.get('ADMIN_USERNAME')
 
 bot = telebot.TeleBot(TOKEN)
+action_handler = DBActionHandler()
 
-session = db.get_session()
-db_dml = db.DB_DML(session)
-
-# now it's always true, probably some handlers can block adding new notes
+# some handlers can block adding new notes in the current state
+# TODO check if we really need this: check that inline buttons are not recognized as text
 add_new_command_state = True
-current_note = db.Thought()
+current_note = Thought()
 default_prompt = "Please use /new command to add new thought to your pull " \
                  "or /random to get a random thought from your pull."
+default_keyboard = telebot.types.ReplyKeyboardRemove(selective=False)
 
 
 @st.cache
@@ -32,8 +33,9 @@ def load_classifier():
 bert_clf = load_classifier()
 
 
-def get_markup(status):
-    if status == 'in_progress':
+def get_buttons(note_status):
+    # TODO add mapping of statuses to button names
+    if note_status == 'in_progress':
         itembtn2 = telebot.types.InlineKeyboardButton('Done', callback_data='#done')
     else:
         itembtn2 = telebot.types.InlineKeyboardButton('Working on it', callback_data='#in_progress')
@@ -46,26 +48,18 @@ def get_markup(status):
     return markup
 
 
-def remove_keyboard():
-    # TODO set as default keyboard for all messages
-    return telebot.types.ReplyKeyboardRemove(selective=False)
-
-
 @bot.message_handler(commands=['random'])
 def send_random_note(message):
     user = message.from_user
+    # TODO move checking to decorator
     if user.username == ADMIN_USERNAME:
         global current_note
-        current_note = db_dml.get_random_note()
-        # global add_new_command_state
-        # it is considered that user will interact with the note somehow, so adding new notes is blocked
-        # add_new_command_state = False
+        current_note = action_handler.get_random_note()
         bot.send_message(
             user.id,
             f"Random thought from your pull: \n{current_note}",
-            reply_markup=get_markup(current_note.status),
+            reply_markup=get_buttons(current_note.status),
         )
-        # bot.register_next_step_handler(message, interact_with_note)
     else:
         bot.send_message(
             user.id,
@@ -83,7 +77,7 @@ def add_new_note(message):
         bot.send_message(
             user.id,
             f"Please send me a new thought to add to your pull.",
-            reply_markup=remove_keyboard(),
+            reply_markup=default_keyboard,
         )
     else:
         bot.send_message(
@@ -95,11 +89,11 @@ def add_new_note(message):
 @bot.message_handler(content_types=['text'])
 def get_text_messages(message):
     user = message.from_user
-    labels, score = bert_clf.predict([message.text])
-    label = labels[0]
+    label = bert_clf.predict([message.text])[0][0]
     # TODO: add logic to handle different labels
     if label == 'relationships':
         label = 'personal'
+    # TODO default values should be set in the Thought class
     default_urgency = 'week'
     default_status = 'open'
     default_eta = 0.5
@@ -107,7 +101,7 @@ def get_text_messages(message):
     if user.username == ADMIN_USERNAME:
         if add_new_command_state:
             global current_note
-            current_note = db.Thought(
+            current_note = Thought(
                 thought=message.text,
                 label=label,
                 urgency=default_urgency,
@@ -116,14 +110,7 @@ def get_text_messages(message):
                 date_created=None,
                 date_completed=None
             )
-            db_dml.add_thought(current_note)
-            # db_dml.add_thought(
-            #     message.text,
-            #     label,
-            #     default_urgency,
-            #     default_status,
-            #     default_eta,
-            # )
+            action_handler.add_thought(current_note)
             bot.send_message(
                 user.id,
                 f"Added\nThought: \"{message.text}\"\nCategory: \"{label}\"\n"
@@ -132,7 +119,7 @@ def get_text_messages(message):
             bot.send_message(
                 user.id,
                 default_prompt,
-                reply_markup=remove_keyboard(),
+                reply_markup=default_keyboard,
             )
     else:
         bot.send_message(
@@ -143,33 +130,27 @@ def get_text_messages(message):
 
 # change the status of the note after pressing a button
 @bot.callback_query_handler(func=lambda call: call.data in [
-    '#done', '#in_progress', '#not_relevant', '#later', '#edit_category'
+    '#done', '#in_progress', '#not_relevant'
 ])
-def callback_worker(call):
-    if call.data == '#done':
-        new_status = "done"
-        # current_note.date_completed = db_dml.get_current_date()
-    elif call.data == '#in_progress':
-        new_status = 'in_progress'
-    elif call.data == '#not_relevant':
-        new_status = 'not_relevant'
-    # elif call.data == '#later':
-
-    else:
-        new_status = current_note.status
-
-    if new_status != current_note.status:
-        db_dml.update_note_status(current_note, new_status)
+def button_update_status(call):
+    new_status = get_new_note_status(call.data)
+    action_handler.update_note_status(current_note, new_status)
     bot.send_message(
         call.message.chat.id,
         f"Status updated to {new_status}.",
-        reply_markup=remove_keyboard(),
+        reply_markup=default_keyboard,
     )
-    # elif call.data == '#edit_category':
-    #     bot.send_message(
-    #         call.message.chat.id,
-    #         f"Please send me a new category for the thought.",
-    #     )  # TODO: add logic to handle new category
+
+def get_new_note_status(callback_data: str):
+    if callback_data == '#done':
+        new_status = "done"
+    elif callback_data == '#in_progress':
+        new_status = 'in_progress'
+    elif callback_data == '#not_relevant':
+        new_status = 'not_relevant'
+    else:
+        new_status = current_note.status
+    return new_status
 
 
 if __name__ == '__main__':
