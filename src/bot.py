@@ -64,6 +64,30 @@ def send_random_note(message):
         )
 
 
+@bot.message_handler(commands=['last'])  # TODO add to bot commands
+def send_last_n_notes(message):
+    user = message.from_user
+    if user.username == ADMIN_USERNAME:
+        n = 5
+        thoughts = action_handler.show_last_n(n)
+        for thought in thoughts:
+            bot.send_message(
+                user.id,
+                thought,
+                reply_markup=get_buttons(thought.status),
+            )
+        # bot.send_message(
+        #     user.id,
+        #     f"Last {n} thoughts from your pull: \n{thoughts}",
+        #     reply_markup=get_buttons(current_note.status),
+        # )
+    else:
+        bot.send_message(
+            user.id,
+            f"You are not authorized to use this bot. Please contact @{ADMIN_USERNAME} to get access.",
+        )
+
+
 @bot.message_handler(commands=['new'])
 def add_new_note(message):
     # doesn't do anything but just invites to send a new note and sets the state to True
@@ -122,7 +146,7 @@ def get_text_messages(message):
 ])
 def button_update_status(call):
     new_status = get_new_note_status(call.data)
-    global current_note
+    global current_note  # TODO change not current note, but the note linked to the message id
     action_handler.update_note_status(current_note, new_status)
     bot.send_message(
         call.message.chat.id,
