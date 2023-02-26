@@ -16,10 +16,7 @@ ADMIN_USERNAME = environ.get('ADMIN_USERNAME')
 bot = telebot.TeleBot(TOKEN)
 action_handler = DBActionHandler()
 
-# some handlers can block adding new notes in the current state
-# TODO check if we really need this: check that inline buttons are not recognized as text
-add_new_command_state = True
-current_note = Thought()
+current_note = Thought()  # TODO: make it a class attribute of the bot
 default_prompt = "Please use /new command to add new thought to your pull " \
                  "or /random to get a random thought from your pull."
 default_keyboard = telebot.types.ReplyKeyboardRemove(selective=False)
@@ -72,8 +69,6 @@ def add_new_note(message):
     # doesn't do anything but just invites to send a new note and sets the state to True
     user = message.from_user
     if user.username == ADMIN_USERNAME:
-        global add_new_command_state
-        add_new_command_state = True
         bot.send_message(
             user.id,
             f"Please send me a new thought to add to your pull.",
@@ -99,28 +94,21 @@ def get_text_messages(message):
     default_eta = 0.5
 
     if user.username == ADMIN_USERNAME:
-        if add_new_command_state:
-            global current_note
-            current_note = Thought(
-                thought=message.text,
-                label=label,
-                urgency=default_urgency,
-                status=default_status,
-                eta=default_eta,
-                date_created=None,
-                date_completed=None
-            )
-            action_handler.add_thought(current_note)
-            bot.send_message(
-                user.id,
-                f"Added\nThought: \"{message.text}\"\nCategory: \"{label}\"\n"
-            )
-        else:
-            bot.send_message(
-                user.id,
-                default_prompt,
-                reply_markup=default_keyboard,
-            )
+        global current_note
+        current_note = Thought(
+            thought=message.text,
+            label=label,
+            urgency=default_urgency,
+            status=default_status,
+            eta=default_eta,
+            date_created=None,
+            date_completed=None
+        )
+        action_handler.add_thought(current_note)
+        bot.send_message(
+            user.id,
+            f"Added\nThought: \"{message.text}\"\nCategory: \"{label}\"\n"
+        )
     else:
         bot.send_message(
             user.id,
@@ -134,11 +122,14 @@ def get_text_messages(message):
 ])
 def button_update_status(call):
     new_status = get_new_note_status(call.data)
+    global current_note
     action_handler.update_note_status(current_note, new_status)
     bot.send_message(
         call.message.chat.id,
-        f"Status updated to {new_status}.",
+        f"Status updated to {current_note.status}.",
         reply_markup=default_keyboard,
+        # TODO: can I edit the previous message buttons? instead of sending buttons again as below
+        # reply_markup=get_buttons(current_note.status),
     )
 
 def get_new_note_status(callback_data: str):
@@ -147,7 +138,7 @@ def get_new_note_status(callback_data: str):
     elif callback_data == '#in_progress':
         new_status = 'in_progress'
     elif callback_data == '#not_relevant':
-        new_status = 'not_relevant'
+        new_status = 'irrelevant'
     else:
         new_status = current_note.status
     return new_status
