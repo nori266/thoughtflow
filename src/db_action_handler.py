@@ -29,7 +29,8 @@ class DBActionHandler:
 
     def get_random_note(self) -> Thought:
         try:
-            thought = self.session.query(Thought).order_by(func.random()).first()
+            # return a random note which status is not "done"
+            thought = self.session.query(Thought).filter(Thought.status != "done").order_by(func.random()).first()
             return thought
         except Exception as e:
             logger.error(e)
