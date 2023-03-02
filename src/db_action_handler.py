@@ -48,7 +48,7 @@ class DBActionHandler:
 
     def show_last_n(self, n=10):
         try:
-            thoughts = self.session.query(Thought).order_by(Thought.id.desc()).limit(n).all()
+            thoughts = self.session.query(Thought).order_by(Thought.id.asc()).limit(n).all()
             return thoughts
         except Exception as e:
             logger.error(e)

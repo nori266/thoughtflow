@@ -32,6 +32,7 @@ bert_clf = load_classifier()
 
 def get_buttons(note_status):
     # TODO add mapping of statuses to button names
+    # FIXME: show all the buttons except the one with the current status
     if note_status == 'in_progress':
         itembtn2 = telebot.types.InlineKeyboardButton('Done', callback_data='#done')
     else:
