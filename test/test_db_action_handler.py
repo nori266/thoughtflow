@@ -17,7 +17,13 @@ def test_show_last_n():
     assert action_handler.show_last_n() is not None
 
 
-# def test_get_user():
-#     action_handler = DBActionHandler()
-#     assert action_handler.get_user('admin') is not None
+def test_send_plots():
+    action_handler = DBActionHandler()
+    thoughts_last_month = action_handler.send_plots()
+    assert isinstance(thoughts_last_month, list)
+    assert len(thoughts_last_month) > 0  # TODO might be empty if no thoughts were added last month
+    assert isinstance(thoughts_last_month[0], tuple)
 
+
+if __name__ == '__main__':
+    test_send_plots()

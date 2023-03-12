@@ -106,6 +106,23 @@ def add_new_note(message):
         )
 
 
+@bot.message_handler(commands=['plot'])
+def send_plots(message):
+    user = message.from_user
+    if user.username == ADMIN_USERNAME:
+        plot_filename = action_handler.send_plots()
+        bot.send_photo(
+            user.id,
+            open(plot_filename, 'rb'),
+            reply_markup=default_keyboard,
+        )
+    else:
+        bot.send_message(
+            user.id,
+            f"You are not authorized to use this bot. Please contact @{ADMIN_USERNAME} to get access.",
+        )
+
+
 @bot.message_handler(content_types=['text'])
 def get_text_messages(message):
     user = message.from_user

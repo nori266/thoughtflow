@@ -1,3 +1,4 @@
+jupyter==1.0.0
 matplotlib==3.6.3
 mysql-connector-python==8.0.31
 seaborn==0.12.2

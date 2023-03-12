@@ -7,12 +7,13 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql.expression import func
 
 from db_entities import Thought, User
+from plot_maker import PlotMaker
 
 
 load_dotenv()
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level = logging.DEBUG)
+logging.basicConfig(level = logging.INFO)
 
 
 class DBActionHandler:
@@ -53,6 +54,18 @@ class DBActionHandler:
         except Exception as e:
             logger.error(e)
 
+    def send_plots(self):
+        # TODO take two dates as arguments
+        try:
+            # get thoughts with date_created not older than a month
+            thoughts = self.session.execute(
+                "SELECT * FROM thought WHERE date_created > DATE_SUB(NOW(), INTERVAL 2 MONTH)"
+            ).fetchall()
+            filename = PlotMaker.get_plots(thoughts)
+            return filename
+        except Exception as e:
+            logger.error(e)
+
     def add_user(self, username, password, email, is_admin):
         try:
             user = User(username=username, password=password, email=email, is_admin=is_admin)
@@ -77,3 +90,9 @@ class DBActionHandler:
         )
         Session = sessionmaker(bind=engine)
         return Session()
+
+
+if __name__ == "__main__":
+    action_handler = DBActionHandler()
+    plot_file = action_handler.send_plots()
+    print(plot_file)
