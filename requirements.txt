@@ -1,7 +1,8 @@
-protobuf==3.20.3
 mysql-connector-python==8.0.32
+openai==0.27.6
 pandas==1.5.2
 plotly==5.14.0
+protobuf==3.20.3
 pytelegrambotapi==4.9.0
 python-dotenv==0.21.0
 scikit-learn==1.2.1

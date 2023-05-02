@@ -27,7 +27,7 @@ class BertClassifier:
         self.tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
         self.trainer = Trainer(model=self.model)
 
-    def predict(self, texts: List[str]):
+    def predict(self, texts: List[str]) -> (List[str], List[float]):
         test_encodings = self.tokenizer(texts, truncation=True, padding=True, max_length=64)
         dataset = ThoughtDataset(test_encodings)
         raw_pred, _, _ = self.trainer.predict(dataset)

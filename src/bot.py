@@ -5,6 +5,7 @@ import streamlit as st
 import telebot
 
 from classifier.bert_classifier import BertClassifier
+from classifier.gpt_classifier import GPTClassifier
 from db_action_handler import DBActionHandler
 from db_entities import Thought
 
@@ -24,10 +25,11 @@ default_keyboard = telebot.types.ReplyKeyboardRemove(selective=False)
 
 @st.cache
 def load_classifier():
-    return BertClassifier("models/fine_tuned_bert/230126_test_model/checkpoint-187")
+    # return BertClassifier("models/fine_tuned_bert/230126_test_model/checkpoint-187")
+    return GPTClassifier()
 
 
-bert_clf = load_classifier()
+clf = load_classifier()
 
 
 def get_buttons(note_status):
@@ -126,7 +128,8 @@ def send_plots(message):
 @bot.message_handler(content_types=['text'])
 def get_text_messages(message):
     user = message.from_user
-    label = bert_clf.predict([message.text])[0][0]
+    # label = clf.predict([message.text])[0][0]
+    label = clf.predict(message.text)
     # TODO: add logic to handle different labels
     if label == 'relationships':
         label = 'personal'
