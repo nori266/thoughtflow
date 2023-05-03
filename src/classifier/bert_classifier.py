@@ -28,6 +28,8 @@ class BertClassifier:
         self.trainer = Trainer(model=self.model)
 
     def predict(self, texts: List[str]) -> (List[str], List[float]):
+        if isinstance(texts, str):
+            texts = [texts]
         test_encodings = self.tokenizer(texts, truncation=True, padding=True, max_length=64)
         dataset = ThoughtDataset(test_encodings)
         raw_pred, _, _ = self.trainer.predict(dataset)
@@ -36,4 +38,5 @@ class BertClassifier:
         best_scores, y_pred = probabilities.topk(1, dim=1)
         best_scores = best_scores.detach().numpy().squeeze()
         predictions = self.encoder.inverse_transform(y_pred)
-        return predictions, best_scores
+        # return predictions, best_scores
+        return predictions[0]

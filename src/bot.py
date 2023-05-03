@@ -128,7 +128,6 @@ def send_plots(message):
 @bot.message_handler(content_types=['text'])
 def get_text_messages(message):
     user = message.from_user
-    # label = clf.predict([message.text])[0][0]
     label = clf.predict(message.text)
     # TODO: add logic to handle different labels
     if label == 'relationships':
