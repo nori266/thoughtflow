@@ -46,6 +46,14 @@ class DBActionHandler:
         except Exception as e:
             logger.error(e)
 
+    def update_note_category(self, thought: Thought, category):
+        try:
+            if category != thought.label:
+                thought.label = category
+                self.session.commit()
+        except Exception as e:
+            logger.error(e)
+
     def show_last_n(self, n=10):
         try:
             thoughts = self.session.query(Thought).order_by(Thought.id.desc()).limit(n).all()

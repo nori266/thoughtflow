@@ -18,15 +18,18 @@ bot = telebot.TeleBot(TOKEN)
 action_handler = DBActionHandler()
 
 current_note = Thought()  # TODO: make it a class attribute of the bot
+category_editing = False
+
 default_prompt = "Please use /new command to add new thought to your pull " \
                  "or /random to get a random thought from your pull."
 default_keyboard = telebot.types.ReplyKeyboardRemove(selective=False)
 
 
+
 @st.cache
 def load_classifier():
-    # return BertClassifier("models/fine_tuned_bert/230126_test_model/checkpoint-187")
-    return GPTClassifier()
+    return BertClassifier("models/fine_tuned_bert/230126_test_model/checkpoint-187")
+    #return GPTClassifier()
 
 
 clf = load_classifier()
@@ -136,8 +139,10 @@ def get_text_messages(message):
     default_urgency = 'week'
     default_status = 'open'
     default_eta = 0.5
+    global current_note
+    global category_editing
 
-    if user.username == ADMIN_USERNAME:
+    if not category_editing and user.username == ADMIN_USERNAME:
         global current_note
         current_note = Thought(
             thought=message.text,
@@ -151,8 +156,19 @@ def get_text_messages(message):
         action_handler.add_thought(current_note)
         bot.send_message(
             user.id,
-            f"Added\nThought: \"{message.text}\"\nCategory: \"{label}\"\n"
+            f"Added\nThought: \"{message.text}\"\nCategory: \"{label}\"\n",
+            reply_markup=get_buttons(current_note.status),
         )
+    elif category_editing and user.username == ADMIN_USERNAME:
+        # global current_note
+        # TODO make sure the category is valid
+        action_handler.update_note_category(current_note, message.text)
+        bot.send_message(
+            user.id,
+            f"Category updated to '{message.text}'.",
+            reply_markup=default_keyboard,
+        )
+        category_editing = False
     else:
         bot.send_message(
             user.id,
@@ -175,6 +191,18 @@ def button_update_status(call):
         # TODO: can I edit the previous message buttons? instead of sending buttons again as below
         # reply_markup=get_buttons(current_note.status),
     )
+
+
+@bot.callback_query_handler(func=lambda call: call.data == '#edit_category')
+def button_edit_category(call):
+    global category_editing
+    category_editing = True
+    bot.send_message(
+        call.message.chat.id,
+        f"New category:",
+        reply_markup=default_keyboard,
+    )
+
 
 def get_new_note_status(callback_data: str):
     if callback_data == '#done':
