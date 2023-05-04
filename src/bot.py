@@ -28,8 +28,8 @@ default_keyboard = telebot.types.ReplyKeyboardRemove(selective=False)
 
 @st.cache
 def load_classifier():
-    return BertClassifier("models/fine_tuned_bert/230126_test_model/checkpoint-187")
-    #return GPTClassifier()
+    #return BertClassifier("models/fine_tuned_bert/230126_test_model/checkpoint-187")
+    return GPTClassifier()
 
 
 clf = load_classifier()
