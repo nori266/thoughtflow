@@ -27,12 +27,18 @@ class GPTClassifier:
             stop=["\n"]
         )
         prediction = response["choices"][0]["text"]
+        return GPTClassifier.post_process_prediction(prediction)
+
+    @staticmethod
+    def post_process_prediction(prediction: str) -> str:
         match = PREDICTION_PATTERN.search(prediction)
         category = match.group(1) if match else "unknown"
+        if category == "pet":
+            category = "pet_project"
         return category
 
 
 if __name__ == '__main__':
     # TODO add to tests
-    message = "find good films by a director of Call me by your name"
-    print(GPTClassifier.predict(prompt))
+    message = "build ui for a pet project"
+    print(GPTClassifier.predict(message))
