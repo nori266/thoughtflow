@@ -14,7 +14,7 @@ model_id_all_fields = os.getenv("MODEL_ID_ALL_FIELDS")
 
 class GPTClassifier:
     @staticmethod
-    def predict(message: str) -> dict:
+    def predict(message: str) -> Dict[str, str]:
         prompt = f"Note: {message} "
         response = openai.Completion.create(
             engine=model_id_only_label,

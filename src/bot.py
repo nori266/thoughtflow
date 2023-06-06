@@ -26,13 +26,20 @@ default_keyboard = telebot.types.ReplyKeyboardRemove(selective=False)
 
 
 
-@st.cache
-def load_classifier():
+@st.cache_resource
+def load_category_classifier():
+    # TODO make Bert a test version of category classifier
     #return BertClassifier("models/fine_tuned_bert/230126_test_model/checkpoint-187")
+    return GPTClassifier()
+
+
+@st.cache_resource
+def load_all_fields_classifier():
     return GPTAllFieldsGenerator()
 
 
-clf = load_classifier()
+clf_category = load_category_classifier()
+clf_all_fields = load_all_fields_classifier()
 
 
 def get_buttons(note_status):
@@ -126,13 +133,13 @@ def send_plots(message):
 @bot.message_handler(content_types=['text'])
 def get_text_messages(message):
     user = message.from_user
-    prediction = clf.predict(message.text)
-    label = prediction["category"]
+    label = clf_category.predict(message.text)["category"]
     # TODO: add logic to handle different labels
     if label == 'relationships':
         label = 'personal'
     # TODO default values should be set in the Thought class
     default_status = 'open'
+    prediction = clf_all_fields.predict(message.text)
     urgency = prediction["urgency"] if "urgency" in prediction else 'week'
     eta = prediction["eta"]
     global current_note
@@ -152,7 +159,7 @@ def get_text_messages(message):
         action_handler.add_thought(current_note)
         response_message = f"Note: \"{message.text}\"\nCategory: \"{label}\"\nUrgency: \"{urgency}\"\n"
         if eta is not None:
-            response_message = f"{response_message}ETA: \"{eta}\"\n"
+            response_message = f"{response_message}ETA: {eta} h\n"
         bot.send_message(
             user.id,
             # TODO: highlight values with a different color instead of quotes
