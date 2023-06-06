@@ -129,3 +129,6 @@ dmypy.json
 
 # OS
 .DS_Store
+
+# models
+models/

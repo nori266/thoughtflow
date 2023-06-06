@@ -5,7 +5,7 @@ import streamlit as st
 import telebot
 
 from classifier.bert_classifier import BertClassifier
-from classifier.gpt_classifier import GPTClassifier
+from classifier.gpt_classifier import GPTClassifier, GPTAllFieldsGenerator
 from db_action_handler import DBActionHandler
 from db_entities import Thought
 
@@ -29,7 +29,7 @@ default_keyboard = telebot.types.ReplyKeyboardRemove(selective=False)
 @st.cache
 def load_classifier():
     #return BertClassifier("models/fine_tuned_bert/230126_test_model/checkpoint-187")
-    return GPTClassifier()
+    return GPTAllFieldsGenerator()
 
 
 clf = load_classifier()
@@ -82,11 +82,6 @@ def send_last_n_notes(message):
                 thought,
                 reply_markup=get_buttons(thought.status),
             )
-        # bot.send_message(
-        #     user.id,
-        #     f"Last {n} thoughts from your pull: \n{thoughts}",
-        #     reply_markup=get_buttons(current_note.status),
-        # )
     else:
         bot.send_message(
             user.id,
@@ -131,14 +126,15 @@ def send_plots(message):
 @bot.message_handler(content_types=['text'])
 def get_text_messages(message):
     user = message.from_user
-    label = clf.predict(message.text)
+    prediction = clf.predict(message.text)
+    label = prediction["category"]
     # TODO: add logic to handle different labels
     if label == 'relationships':
         label = 'personal'
     # TODO default values should be set in the Thought class
-    default_urgency = 'week'
     default_status = 'open'
-    default_eta = 0.5
+    urgency = prediction["urgency"] if "urgency" in prediction else 'week'
+    eta = prediction["eta"]
     global current_note
     global category_editing
 
@@ -147,20 +143,23 @@ def get_text_messages(message):
         current_note = Thought(
             thought=message.text,
             label=label,
-            urgency=default_urgency,
+            urgency=urgency,
             status=default_status,
-            eta=default_eta,
+            eta=eta,
             date_created=None,
             date_completed=None
         )
         action_handler.add_thought(current_note)
+        response_message = f"Note: \"{message.text}\"\nCategory: \"{label}\"\nUrgency: \"{urgency}\"\n"
+        if eta is not None:
+            response_message = f"{response_message}ETA: \"{eta}\"\n"
         bot.send_message(
             user.id,
-            f"Added\nThought: \"{message.text}\"\nCategory: \"{label}\"\n",
+            # TODO: highlight values with a different color instead of quotes
+            response_message,
             reply_markup=get_buttons(current_note.status),
         )
     elif category_editing and user.username == ADMIN_USERNAME:
-        # global current_note
         # TODO make sure the category is valid
         action_handler.update_note_category(current_note, message.text)
         bot.send_message(
