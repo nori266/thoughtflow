@@ -15,11 +15,14 @@ model_id_all_fields = os.getenv("MODEL_ID_ALL_FIELDS")
 class GPTClassifier:
     @staticmethod
     def predict(message: str) -> Dict[str, str]:
+        if re.sub(r'https?://\S+', "", message).strip() == "":
+            return {"category": "link"}
         prompt = f"Note: {message} "
         response = openai.Completion.create(
             engine=model_id_only_label,
             prompt=prompt,
             max_tokens=10,
+            # TODO test with lower temperature
             temperature=0.9,
             top_p=1,
             frequency_penalty=0,
@@ -42,6 +45,13 @@ class GPTClassifier:
 class GPTAllFieldsGenerator:
     @staticmethod
     def predict(message: str) -> Dict[str, Union[str, float]]:
+        if re.sub(r'https?://\S+', "", message).strip() == "":
+            return {
+            "category": "link",
+            "action": "todo",
+            "urgency": "unknown",
+            "eta": None
+        }
         prompt = f"Note: {message} "
         response = openai.Completion.create(
             engine=model_id_all_fields,

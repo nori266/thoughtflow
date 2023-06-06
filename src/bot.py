@@ -134,12 +134,12 @@ def send_plots(message):
 def get_text_messages(message):
     user = message.from_user
     label = clf_category.predict(message.text)["category"]
+    prediction = clf_all_fields.predict(message.text)
     # TODO: add logic to handle different labels
     if label == 'relationships':
         label = 'personal'
     # TODO default values should be set in the Thought class
     default_status = 'open'
-    prediction = clf_all_fields.predict(message.text)
     urgency = prediction["urgency"] if "urgency" in prediction else 'week'
     eta = prediction["eta"]
     global current_note
