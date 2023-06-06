@@ -157,14 +157,23 @@ def get_text_messages(message):
             date_completed=None
         )
         action_handler.add_thought(current_note)
-        response_message = f"Note: \"{message.text}\"\nCategory: \"{label}\"\nUrgency: \"{urgency}\"\n"
+        label_text = telebot.formatting.hbold(label)
+        urgency_text = telebot.formatting.hbold(urgency)
+        response_message = f"Note: \"{message.text}\"\nCategory: {label_text}\nUrgency: {urgency_text}\n"
         if eta is not None:
-            response_message = f"{response_message}ETA: {eta} h\n"
+            # convert to hours with minutes: 1.5h -> 1h 30min
+            float_eta = float(eta)
+            hours = int(float_eta)
+            minutes = int((float_eta - hours) * 60)
+            eta_text = f"{hours}h {minutes}min" if hours > 0 else f"{minutes}min"
+            eta_text = telebot.formatting.hbold(eta_text)
+            response_message = f"{response_message}ETA: {eta_text}\n"
         bot.send_message(
             user.id,
             # TODO: highlight values with a different color instead of quotes
             response_message,
             reply_markup=get_buttons(current_note.status),
+            parse_mode='HTML',
         )
     elif category_editing and user.username == ADMIN_USERNAME:
         # TODO make sure the category is valid
