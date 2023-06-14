@@ -130,65 +130,62 @@ def send_plots(message):
         )
 
 
-@bot.message_handler(content_types=['text'])
-def get_text_messages(message):
-    user = message.from_user
+
+def get_note_category(message):
     label = clf_category.predict(message.text)["category"]
-    prediction = clf_all_fields.predict(message.text)
-    # TODO: add logic to handle different labels
     if label == 'relationships':
         label = 'personal'
-    # TODO default values should be set in the Thought class
-    default_status = 'open'
-    urgency = prediction["urgency"] if "urgency" in prediction else 'week'
-    eta = prediction["eta"]
+    return label
+
+
+def get_all_fields_prediction(message):
+    return clf_all_fields.predict(message.text)
+
+
+def format_response_message(message, label, urgency, eta=None):
+    label_text = telebot.formatting.hbold(label)
+    urgency_text = telebot.formatting.hbold(urgency)
+    response_message = f"Note: \"{message.text}\"\nCategory: {label_text}\nUrgency: {urgency_text}\n"
+    if eta is not None:
+        float_eta = float(eta)
+        hours = int(float_eta)
+        minutes = int((float_eta - hours) * 60)
+        eta_text = f"{hours}h {minutes}min" if hours > 0 else f"{minutes}min"
+        eta_text = telebot.formatting.hbold(eta_text)
+        response_message = f"{response_message}ETA: {eta_text}\n"
+    return response_message
+
+
+def handle_note_creation(user, message, label, prediction):
     global current_note
     global category_editing
-
     if not category_editing and user.username == ADMIN_USERNAME:
-        global current_note
         current_note = Thought(
             thought=message.text,
             label=label,
-            urgency=urgency,
-            status=default_status,
-            eta=eta,
+            urgency=prediction["urgency"],
+            status='open',
+            eta=prediction["eta"],
             date_created=None,
             date_completed=None
         )
         action_handler.add_thought(current_note)
-        label_text = telebot.formatting.hbold(label)
-        urgency_text = telebot.formatting.hbold(urgency)
-        response_message = f"Note: \"{message.text}\"\nCategory: {label_text}\nUrgency: {urgency_text}\n"
-        if eta is not None:
-            # convert to hours with minutes: 1.5h -> 1h 30min
-            float_eta = float(eta)
-            hours = int(float_eta)
-            minutes = int((float_eta - hours) * 60)
-            eta_text = f"{hours}h {minutes}min" if hours > 0 else f"{minutes}min"
-            eta_text = telebot.formatting.hbold(eta_text)
-            response_message = f"{response_message}ETA: {eta_text}\n"
-        bot.send_message(
-            user.id,
-            # TODO: highlight values with a different color instead of quotes
-            response_message,
-            reply_markup=get_buttons(current_note.status),
-            parse_mode='HTML',
-        )
+        response_message = format_response_message(message, label, prediction["urgency"], prediction["eta"])
+        bot.send_message(user.id, response_message, reply_markup=get_buttons(current_note.status), parse_mode='HTML')
     elif category_editing and user.username == ADMIN_USERNAME:
-        # TODO make sure the category is valid
         action_handler.update_note_category(current_note, message.text)
-        bot.send_message(
-            user.id,
-            f"Category updated to '{message.text}'.",
-            reply_markup=default_keyboard,
-        )
+        bot.send_message(user.id, f"Category updated to '{message.text}'.", reply_markup=default_keyboard)
         category_editing = False
     else:
-        bot.send_message(
-            user.id,
-            f"You are not authorized to use this bot. Please contact @{ADMIN_USERNAME} to get access.",
-        )
+        bot.send_message(user.id, f"You are not authorized to use this bot. Please contact @{ADMIN_USERNAME} to get access.")
+
+
+@bot.message_handler(content_types=['text'])
+def get_text_messages(message):
+    user = message.from_user
+    label = get_note_category(message)
+    prediction = get_all_fields_prediction(message)
+    handle_note_creation(user, message, label, prediction)
 
 
 # change the status of the note after pressing a button
