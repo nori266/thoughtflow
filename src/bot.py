@@ -17,8 +17,10 @@ ADMIN_USERNAME = environ.get('ADMIN_USERNAME')
 bot = telebot.TeleBot(TOKEN)
 action_handler = DBActionHandler()
 
+"""Global variables"""
 current_note = Thought()  # TODO: make it a class attribute of the bot
 category_editing = False
+last_note_message_id = None  # id of the bot message related to the last note (for editing)
 
 default_prompt = "Please use /new command to add new thought to your pull " \
                  "or /random to get a random thought from your pull."
@@ -130,7 +132,6 @@ def send_plots(message):
         )
 
 
-
 def get_note_category(message):
     label = clf_category.predict(message.text)["category"]
     if label == 'relationships':
@@ -145,6 +146,7 @@ def get_all_fields_prediction(message):
 def format_response_message(message, label, urgency, eta=None):
     label_text = telebot.formatting.hbold(label)
     urgency_text = telebot.formatting.hbold(urgency)
+    # TODO take text instead of message as an argument, or better take a Thought object (current_note)
     response_message = f"Note: \"{message.text}\"\nCategory: {label_text}\nUrgency: {urgency_text}\n"
     if eta is not None:
         float_eta = float(eta)
@@ -159,6 +161,7 @@ def format_response_message(message, label, urgency, eta=None):
 def handle_note_creation(user, message, label, prediction):
     global current_note
     global category_editing
+    global last_note_message_id
     if not category_editing and user.username == ADMIN_USERNAME:
         current_note = Thought(
             thought=message.text,
@@ -171,12 +174,14 @@ def handle_note_creation(user, message, label, prediction):
         )
         action_handler.add_thought(current_note)
         response_message = format_response_message(message, label, prediction["urgency"], prediction["eta"])
-        bot.send_message(user.id, response_message, reply_markup=get_buttons(current_note.status), parse_mode='HTML')
+        sent_message = bot.send_message(user.id, response_message, reply_markup=get_buttons(current_note.status), parse_mode='HTML')
+        last_note_message_id = sent_message.message_id
     elif category_editing and user.username == ADMIN_USERNAME:
         action_handler.update_note_category(current_note, message.text)
         bot.send_message(user.id, f"Category updated to '{message.text}'.", reply_markup=default_keyboard)
         category_editing = False
     else:
+        # TODO move bot.send_message out of this function to get_text_messages
         bot.send_message(user.id, f"You are not authorized to use this bot. Please contact @{ADMIN_USERNAME} to get access.")
 
 
@@ -202,6 +207,13 @@ def button_update_status(call):
         reply_markup=default_keyboard,
         # TODO: can I edit the previous message buttons? instead of sending buttons again as below
         # reply_markup=get_buttons(current_note.status),
+    )
+    bot.edit_message_text(
+        f"Note: {current_note.thought},\nCategory: {current_note.label},\nUrgency: {current_note.urgency},\n"
+        f"ETA: {current_note.eta},\nStatus: {current_note.status}",
+        call.message.chat.id,
+        last_note_message_id,
+        reply_markup=get_buttons(current_note.status)
     )
 
 
