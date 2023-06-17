@@ -158,21 +158,31 @@ def format_response_message(message, label, urgency, eta=None):
     return response_message
 
 
-def handle_note_creation(user, message, label, prediction):
+def handle_note_creation(message, label, prediction):
+    global current_note
+    current_note = Thought(
+        thought=message.text,
+        label=label,
+        urgency=prediction["urgency"],
+        status='open',
+        eta=prediction["eta"],
+        date_created=None,
+        date_completed=None
+    )
+    action_handler.add_thought(current_note)
+
+
+@bot.message_handler(content_types=['text'])
+def get_text_messages(message):
     global current_note
     global category_editing
     global last_note_message_id
+    user = message.from_user
+    label = get_note_category(message)
+    prediction = get_all_fields_prediction(message)
+    handle_note_creation(message, label, prediction)
+
     if not category_editing and user.username == ADMIN_USERNAME:
-        current_note = Thought(
-            thought=message.text,
-            label=label,
-            urgency=prediction["urgency"],
-            status='open',
-            eta=prediction["eta"],
-            date_created=None,
-            date_completed=None
-        )
-        action_handler.add_thought(current_note)
         response_message = format_response_message(message, label, prediction["urgency"], prediction["eta"])
         sent_message = bot.send_message(user.id, response_message, reply_markup=get_buttons(current_note.status), parse_mode='HTML')
         last_note_message_id = sent_message.message_id
@@ -181,16 +191,7 @@ def handle_note_creation(user, message, label, prediction):
         bot.send_message(user.id, f"Category updated to '{message.text}'.", reply_markup=default_keyboard)
         category_editing = False
     else:
-        # TODO move bot.send_message out of this function to get_text_messages
         bot.send_message(user.id, f"You are not authorized to use this bot. Please contact @{ADMIN_USERNAME} to get access.")
-
-
-@bot.message_handler(content_types=['text'])
-def get_text_messages(message):
-    user = message.from_user
-    label = get_note_category(message)
-    prediction = get_all_fields_prediction(message)
-    handle_note_creation(user, message, label, prediction)
 
 
 # change the status of the note after pressing a button
@@ -205,9 +206,9 @@ def button_update_status(call):
         call.message.chat.id,
         f"Status updated to {current_note.status}.",
         reply_markup=default_keyboard,
-        # TODO: can I edit the previous message buttons? instead of sending buttons again as below
-        # reply_markup=get_buttons(current_note.status),
     )
+    # TODO: same formatting as in the message handler
+    # TODO: do not store last message id, but the message id linked to the note
     bot.edit_message_text(
         f"Note: {current_note.thought},\nCategory: {current_note.label},\nUrgency: {current_note.urgency},\n"
         f"ETA: {current_note.eta},\nStatus: {current_note.status}",
