@@ -9,13 +9,14 @@ Base = declarative_base()
 class Thought(Base):
     __tablename__ = 'thought'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    thought = Column(String(512))
+    thought = Column(String(512))  # TODO: change to Text
     label = Column(String(32))
     urgency = Column(String(16))
     status = Column(String(16))
     eta = Column(Float(2), default=0.5)
     date_created = Column(DateTime, default=func.now())  # TODO test this
     date_completed = Column(DateTime)
+    message_id = Column(Integer)
 
     def __repr__(self):
         thought_col_len = 40
