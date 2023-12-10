@@ -1,4 +1,5 @@
 from os import environ
+from typing import Optional
 
 from dotenv import load_dotenv
 import streamlit as st
@@ -16,8 +17,9 @@ ADMIN_USERNAME = environ.get('ADMIN_USERNAME')
 bot = telebot.TeleBot(TOKEN)
 action_handler = DBActionHandler()
 
-current_note = Thought()  # TODO: make it a class attribute of the bot
+"""Global variables"""
 category_editing = False
+editing_message_id: Optional[int] = None
 
 default_prompt = "Please use /new command to add new thought to your pull " \
                  "or /random to get a random thought from your pull."
@@ -53,12 +55,11 @@ def send_random_note(message):
     user = message.from_user
     # TODO move checking to decorator
     if user.username == ADMIN_USERNAME:
-        global current_note
-        current_note = action_handler.get_random_note()
+        random_note = action_handler.get_random_note()
         bot.send_message(
             user.id,
-            f"Random thought from your pull: \n{current_note}",
-            reply_markup=get_buttons(current_note.status),
+            f"Random thought from your pull: \n{random_note}",  # TODO format the message
+            reply_markup=get_buttons(random_note.status),
         )
     else:
         bot.send_message(
@@ -120,56 +121,65 @@ def send_plots(message):
         )
 
 
+def get_note_category(message):
+    label = clf_category.predict(message.text)["category"]
+    if label == 'relationships':
+        label = 'personal'
+    return label
+
+
+def format_response_message(message, label, urgency, eta=None) -> str:
+    label_text = telebot.formatting.hbold(label)
+    urgency_text = telebot.formatting.hbold(urgency)
+    # TODO take text instead of message as an argument, or better take a Thought object
+    response_message = f"Note: \"{message.text}\"\nCategory: {label_text}\nUrgency: {urgency_text}\n"
+    if eta is not None:
+        float_eta = float(eta)
+        hours = int(float_eta)
+        minutes = int((float_eta - hours) * 60)
+        eta_text = f"{hours}h {minutes}min" if hours > 0 else f"{minutes}min"
+        eta_text = telebot.formatting.hbold(eta_text)
+        response_message = f"{response_message}ETA: {eta_text}\n"
+    return response_message
+
+
+def handle_note_creation(note_text, label, urgency, eta, message_id, status):
+    note = Thought(
+        thought=note_text,
+        label=label,
+        urgency=urgency,
+        status=status,
+        eta=eta,
+        date_created=None,
+        date_completed=None,
+        message_id=message_id,
+    )
+    action_handler.add_thought(note)
+
+
 @bot.message_handler(content_types=['text'])
 def get_text_messages(message):
-    user = message.from_user
-    label = clf_category.predict(message.text)["category"]
-    # TODO default values should be set in the Thought class
-    default_status = 'open'
-    urgency = 'week'
-    eta = 0.5
-    global current_note
     global category_editing
+    user = message.from_user
 
     if not category_editing and user.username == ADMIN_USERNAME:
-        global current_note
-        current_note = Thought(
-            thought=message.text,
-            label=label,
-            urgency=urgency,
-            status=default_status,
-            eta=eta,
-            date_created=None,
-            date_completed=None
-        )
-        action_handler.add_thought(current_note)
-        label_text = telebot.formatting.hbold(label)
-        urgency_text = telebot.formatting.hbold(urgency)
-        response_message = f"Note: \"{message.text}\"\nCategory: {label_text}\nUrgency: {urgency_text}\n"
-        if eta is not None:
-            # convert to hours with minutes: 1.5h -> 1h 30min
-            float_eta = float(eta)
-            hours = int(float_eta)
-            minutes = int((float_eta - hours) * 60)
-            eta_text = f"{hours}h {minutes}min" if hours > 0 else f"{minutes}min"
-            eta_text = telebot.formatting.hbold(eta_text)
-            response_message = f"{response_message}ETA: {eta_text}\n"
-        bot.send_message(
-            user.id,
-            # TODO: highlight values with a different color instead of quotes
-            response_message,
-            reply_markup=get_buttons(current_note.status),
-            parse_mode='HTML',
-        )
+        label = get_note_category(message)
+        status = "open"
+        urgency = 'week'
+        eta = 0.5
+        response_message_text: str = format_response_message(message, label, urgency, eta)
+        response_message = bot.send_message(user.id, response_message_text, reply_markup=get_buttons(status), parse_mode='HTML')
+        handle_note_creation(message.text, label, urgency, eta, response_message.message_id, status)
     elif category_editing and user.username == ADMIN_USERNAME:
-        # TODO make sure the category is valid
-        action_handler.update_note_category(current_note, message.text)
+        global editing_message_id
+        action_handler.update_note_category(editing_message_id, message.text)
         bot.send_message(
             user.id,
             f"Category updated to '{message.text}'.",
             reply_markup=default_keyboard,
         )
         category_editing = False
+        editing_message_id = None
     else:
         bot.send_message(
             user.id,
@@ -183,24 +193,32 @@ def get_text_messages(message):
 ])
 def button_update_status(call):
     new_status = get_new_note_status(call.data)
-    global current_note  # TODO change not current note, but the note linked to the message id
-    action_handler.update_note_status(current_note, new_status)
+    message_id = call.message.message_id
+    note = action_handler.update_note_status(message_id, new_status)
     bot.send_message(
         call.message.chat.id,
-        f"Status updated to {current_note.status}.",
+        f"Status updated to {note.status}.",
         reply_markup=default_keyboard,
-        # TODO: can I edit the previous message buttons? instead of sending buttons again as below
-        # reply_markup=get_buttons(current_note.status),
+    )
+    # TODO: same formatting as in the message handler
+    bot.edit_message_text(
+        f"Note: {note.thought},\nCategory: {note.label},\nUrgency: {note.urgency},\n"
+        f"ETA: {note.eta},\nStatus: {note.status}",
+        call.message.chat.id,
+        message_id,
+        reply_markup=get_buttons(note.status)
     )
 
 
 @bot.callback_query_handler(func=lambda call: call.data == '#edit_category')
 def button_edit_category(call):
     global category_editing
+    global editing_message_id
     category_editing = True
+    editing_message_id = call.message.message_id
     bot.send_message(
         call.message.chat.id,
-        f"New category:",
+        f"Enter new category:",
         reply_markup=default_keyboard,
     )
 
@@ -213,7 +231,7 @@ def get_new_note_status(callback_data: str):
     elif callback_data == '#not_relevant':
         new_status = 'irrelevant'
     else:
-        new_status = current_note.status
+        new_status = None
     return new_status
 
 

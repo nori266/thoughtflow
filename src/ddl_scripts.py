@@ -2,15 +2,18 @@ import argparse
 import logging
 import os
 
+from dotenv import load_dotenv
 import pandas as pd
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy import Integer
 from tqdm import tqdm
 
 from db_entities import Thought
 
 
+load_dotenv()
 logger = logging.getLogger(__name__)
 logging.basicConfig(level = logging.DEBUG)
 
@@ -54,6 +57,11 @@ class DB_DDL:
         except Exception as e:
             logger.error(e)
 
+    def add_column(self, table: Base, column: str, column_type):
+        self.session.execute(f"ALTER TABLE {table.__tablename__} ADD COLUMN {column} {column_type().compile(self.session.bind.dialect)}")
+        self.session.commit()
+
+
     @staticmethod
     def get_session():
         # TODO move to utils so that it can be reused in db_action_handler
@@ -83,14 +91,17 @@ def reload_data(csv_file):
 
 if __name__ == '__main__':
     # ask the user if they want to reload the data from the csv file
-    reload = input("Do you want to reload the data from the csv file? "
-                   "This will remove all current data in the database! (yes/no): ")
-    args = argparse.ArgumentParser()
-    args.add_argument('--csv', type=str)
-    parsed_args = args.parse_args()
-    if reload == 'yes':
-        reload_data(parsed_args.csv)
-    elif reload == 'no':
-        print("Data not reloaded.")
-    else:
-        print("Invalid input. Please type 'yes' or 'no'.")
+    # reload = input("Do you want to reload the data from the csv file? "
+    #                "This will remove all current data in the database! (yes/no): ")
+    # args = argparse.ArgumentParser()
+    # args.add_argument('--csv', type=str)
+    # parsed_args = args.parse_args()
+    # if reload == 'yes':
+    #     reload_data(parsed_args.csv)
+    # elif reload == 'no':
+    #     print("Data not reloaded.")
+    # else:
+    #     print("Invalid input. Please type 'yes' or 'no'.")
+
+    db_ddl = DB_DDL()
+    db_ddl.add_column(Thought, 'message_id', Integer)

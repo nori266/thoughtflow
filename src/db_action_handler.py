@@ -1,5 +1,6 @@
 import logging
 import os
+from typing import Optional
 
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
@@ -36,20 +37,47 @@ class DBActionHandler:
         except Exception as e:
             logger.error(e)
 
-    def update_note_status(self, thought: Thought, status):
+    def update_note_status(self, message_id: int, status: Optional[str]) -> Thought:
         try:
-            if status != thought.status:
+            thought = self.session.query(Thought).filter(Thought.message_id == message_id).first()
+            if status is not None and status != thought.status:
                 thought.status = status
                 # TODO: add logic to handle date_completed if the status is "done"
                 # TODO: write some log to track the status change (maybe don't even store any dates in the Thought table)
                 self.session.commit()
+            return thought
+        except Exception as e:
+            logger.error("Error updating note status", e)
+
+    def update_note_category(self, message_id: Optional[int], category: str):
+        if message_id is None:
+            return
+        try:
+            thought = self.session.query(Thought).filter(Thought.message_id == message_id).first()
+            if category != thought.label:
+                thought.label = category
+                self.session.commit()
         except Exception as e:
             logger.error(e)
 
-    def update_note_category(self, thought: Thought, category):
+    def update_note_urgency(self, message_id: Optional[int], urgency: str):
+        if message_id is None:
+            return
         try:
-            if category != thought.label:
-                thought.label = category
+            thought = self.session.query(Thought).filter(Thought.message_id == message_id).first()
+            if urgency != thought.urgency:
+                thought.urgency = urgency
+                self.session.commit()
+        except Exception as e:
+            logger.error(e)
+
+    def update_note_eta(self, message_id: Optional[int], eta: str):
+        if message_id is None:
+            return
+        try:
+            thought = self.session.query(Thought).filter(Thought.message_id == message_id).first()
+            if eta != thought.eta:
+                thought.eta = eta
                 self.session.commit()
         except Exception as e:
             logger.error(e)
