@@ -132,3 +132,6 @@ dmypy.json
 
 # models
 models/
+
+# data
+data

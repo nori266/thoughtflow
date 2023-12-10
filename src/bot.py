@@ -4,8 +4,7 @@ from dotenv import load_dotenv
 import streamlit as st
 import telebot
 
-from classifier.bert_classifier import BertClassifier
-from classifier.gpt_classifier import GPTClassifier, GPTAllFieldsGenerator
+from classifier.rag import RAG
 from db_action_handler import DBActionHandler
 from db_entities import Thought
 
@@ -25,21 +24,12 @@ default_prompt = "Please use /new command to add new thought to your pull " \
 default_keyboard = telebot.types.ReplyKeyboardRemove(selective=False)
 
 
-
 @st.cache_resource
 def load_category_classifier():
-    # TODO make Bert a test version of category classifier
-    #return BertClassifier("models/fine_tuned_bert/230126_test_model/checkpoint-187")
-    return GPTClassifier()
-
-
-@st.cache_resource
-def load_all_fields_classifier():
-    return GPTAllFieldsGenerator()
+    return RAG()
 
 
 clf_category = load_category_classifier()
-clf_all_fields = load_all_fields_classifier()
 
 
 def get_buttons(note_status):
@@ -134,14 +124,10 @@ def send_plots(message):
 def get_text_messages(message):
     user = message.from_user
     label = clf_category.predict(message.text)["category"]
-    prediction = clf_all_fields.predict(message.text)
-    # TODO: add logic to handle different labels
-    if label == 'relationships':
-        label = 'personal'
     # TODO default values should be set in the Thought class
     default_status = 'open'
-    urgency = prediction["urgency"] if "urgency" in prediction else 'week'
-    eta = prediction["eta"]
+    urgency = 'week'
+    eta = 0.5
     global current_note
     global category_editing
 
