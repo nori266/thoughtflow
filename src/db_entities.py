@@ -10,7 +10,7 @@ class Thought(Base):
     __tablename__ = 'thought'
     id = Column(Integer, primary_key=True, autoincrement=True)
     thought = Column(String(512))  # TODO: change to Text
-    label = Column(String(32))
+    label = Column(String(512))
     urgency = Column(String(16))
     status = Column(String(16))
     eta = Column(Float(2), default=0.5)
