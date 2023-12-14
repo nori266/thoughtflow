@@ -122,10 +122,7 @@ def send_plots(message):
 
 
 def get_note_category(message):
-    label = clf_category.predict(message.text)["category"]
-    if label == 'relationships':
-        label = 'personal'
-    return label
+    return clf_category.predict(message.text)["category"]
 
 
 def format_response_message(message, label, urgency, eta=None) -> str:
