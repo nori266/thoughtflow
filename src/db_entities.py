@@ -9,7 +9,7 @@ Base = declarative_base()
 class Thought(Base):
     __tablename__ = 'thought'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    thought = Column(String(512))  # TODO: change to Text
+    note_text = Column(String(512))  # TODO: change to Text
     label = Column(String(512))
     urgency = Column(String(16))
     status = Column(String(16))
@@ -20,11 +20,11 @@ class Thought(Base):
 
     def __repr__(self):
         thought_col_len = 40
-        if len(self.thought) > thought_col_len:
-            thought = self.thought[:thought_col_len]
+        if len(self.note_text) > thought_col_len:
+            thought = self.note_text[:thought_col_len]
         else:
-            pad_len = thought_col_len - len(self.thought)
-            thought = self.thought + " " * pad_len
+            pad_len = thought_col_len - len(self.note_text)
+            thought = self.note_text + " " * pad_len
 
         # TODO padding for all columns
         return f"{thought}\t{self.label}\t\t\t{self.urgency}\t{self.status}\t{self.eta}\t{self.date_created}\t" \

@@ -77,7 +77,7 @@ def send_last_n_notes(message):
         for thought in thoughts:
             bot.send_message(
                 user.id,
-                thought,
+                thought.note_text,
                 reply_markup=get_buttons(thought.status),
             )
     else:
@@ -199,7 +199,7 @@ def button_update_status(call):
     )
     # TODO: same formatting as in the message handler
     bot.edit_message_text(
-        f"Note: {note.thought},\nCategory: {note.label},\nUrgency: {note.urgency},\n"
+        f"Note: {note.note_text},\nCategory: {note.label},\nUrgency: {note.urgency},\n"
         f"ETA: {note.eta},\nStatus: {note.status}",
         call.message.chat.id,
         message_id,
