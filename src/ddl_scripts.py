@@ -3,8 +3,11 @@ import logging
 import os
 
 from dotenv import load_dotenv
+import numpy as np
 import pandas as pd
 from sqlalchemy import create_engine
+from sqlalchemy.engine.reflection import Inspector
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import Integer
@@ -33,6 +36,15 @@ class DB_DDL:
     def create_table(self, table: Base):
         table.__table__.create(self.session.bind)
 
+    def create_table_from_model(self, model_class):
+        try:
+            model_class.__table__.create(bind=self.session.bind, checkfirst=True)
+            self.session.commit()
+            logger.info(f"Table '{model_class.__tablename__}' created successfully.")
+        except SQLAlchemyError as e:
+            logger.error(f"Error creating table '{model_class.__tablename__}': {e}")
+            raise
+
     def drop_table(self, table: Base):
         table.__table__.drop(self.session.bind)
 
@@ -42,9 +54,10 @@ class DB_DDL:
             # replace Nan with None
             df = df.where(pd.notnull(df), None)
             df['eta'].fillna(0.5, inplace=True)
+            df = df.fillna(np.nan).astype(object).replace({np.nan: None})
             for _, row in tqdm(df.iterrows(), total=len(df)):
                 thought = Thought(
-                    thought=row['thought'],
+                    note_text=row['note_text'],
                     label=row['label'],
                     urgency=row['urgency'],
                     status=row['status'],
@@ -61,6 +74,18 @@ class DB_DDL:
         self.session.execute(f"ALTER TABLE {table.__tablename__} ADD COLUMN {column} {column_type().compile(self.session.bind.dialect)}")
         self.session.commit()
 
+    def rename_column(self, table, old_column_name, new_column_name):
+        try:
+            rename_command = f"""
+                ALTER TABLE {table.__tablename__} 
+                RENAME COLUMN {old_column_name} TO {new_column_name};
+            """
+            self.session.execute(rename_command)
+            self.session.commit()
+            logger.info(f"Column '{old_column_name}' renamed to '{new_column_name}' in '{table.__tablename__}'.")
+        except SQLAlchemyError as e:
+            logger.error(f"Error renaming column: {e}")
+            raise
 
     @staticmethod
     def get_session():
@@ -82,9 +107,17 @@ def reload_data(csv_file):
     :return:
     """
     db_ddl = DB_DDL()
+    inspector = Inspector.from_engine(db_ddl.session.bind)
     # TODO add a check to see if the csv file exists
     # TODO backup the database before dropping the tables
+    tables_before = inspector.get_table_names()
+    logger.info(f"Tables before drop: {tables_before}")
+
     db_ddl.drop_all_tables()
+
+    # Checking tables after drop
+    tables_after_drop = inspector.get_table_names()
+    logger.info(f"Tables after drop: {tables_after_drop}")
     db_ddl.create_all_tables()
     db_ddl.add_thoughts_from_csv(csv_file)
 
@@ -104,4 +137,6 @@ if __name__ == '__main__':
     #     print("Invalid input. Please type 'yes' or 'no'.")
 
     db_ddl = DB_DDL()
-    db_ddl.add_column(Thought, 'message_id', Integer)
+    db_ddl.create_table_from_model(Thought)  # Seems to work
+    # db_ddl.add_column(Thought, 'message_id', Integer)
+    db_ddl.rename_column(Thought, 'thought', 'note_text')
