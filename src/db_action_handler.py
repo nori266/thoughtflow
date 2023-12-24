@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import Optional
+from typing import List, Optional
 
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
@@ -88,6 +88,15 @@ class DBActionHandler:
             return thoughts
         except Exception as e:
             logger.error(e)
+
+    def get_all_notes(self) -> List:
+        query = self.session.query(Thought)
+        record_count = query.count()
+
+        if record_count > 1000:
+            query = query.order_by(Thought.id.desc()).limit(1000)
+
+        return query.all()
 
     def send_plots(self):
         # TODO take two dates as arguments
