@@ -5,9 +5,9 @@ from dotenv import load_dotenv
 import streamlit as st
 import telebot
 
-from classifier.rag import RAG
 from db_action_handler import DBActionHandler
 from db_entities import Thought
+from rag import RAG
 
 
 load_dotenv()
@@ -142,7 +142,7 @@ def format_response_message(message, label, urgency, eta=None) -> str:
 
 def handle_note_creation(note_text, label, urgency, eta, message_id, status):
     note = Thought(
-        thought=note_text,
+        note_text=note_text,
         label=label,
         urgency=urgency,
         status=status,
