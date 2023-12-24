@@ -135,3 +135,6 @@ models/
 
 # data
 data
+
+# jupyter notebooks
+notebooks/
