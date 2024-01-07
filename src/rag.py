@@ -7,6 +7,7 @@ from langchain.llms import Ollama
 from langchain.prompts import PromptTemplate, FewShotPromptTemplate
 from langchain.prompts.example_selector import SemanticSimilarityExampleSelector
 from langchain.vectorstores import Chroma
+import pandas as pd
 
 from db_action_handler import DBActionHandler
 
@@ -17,16 +18,14 @@ LOGGER.setLevel(logging.INFO)
 class RAG:
     def __init__(self):
         self.model_name = "orca2:13b"  # orca2 is best
-        self.llm = Ollama(model=self.model_name)  # TODO switch to deepinfra llama
+        self.llm = Ollama(model=self.model_name)  # TODO switch to deepinfra llama. Is there orca in deepinfra?
         embedding_function = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")  # TODO experiment with other embeddings
         self.db_action_handler = DBActionHandler()
 
         # Load data and categories
         self.data = self.db_action_handler.get_all_notes()  # TODO just store data in vectors
         with open("data/category_paths.csv") as f:
-            categories = [
-                c.strip() for c in f
-            ]
+            categories = pd.read_csv('data/category_paths.csv').show_category.tolist()
 
         self.examples = [
             {
@@ -69,7 +68,7 @@ class RAG:
 
     def predict(self, message: str) -> Dict[str, Union[str, float]]:
         # TODO why are there duplicates in sim search results?
-        candidate_categories = {doc.page_content for doc in self.db.similarity_search(message, k=10)}
+        candidate_categories = {doc.page_content for doc in self.db.similarity_search(message, k=20)}
         candidate_categories_text = "\n".join(candidate_categories)
         whole_prompt = self.similar_prompt.format(note=message, candidate_categories=candidate_categories_text)
         LOGGER.info(whole_prompt)
