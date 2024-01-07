@@ -2,9 +2,11 @@ from os import environ
 from typing import Optional
 
 from dotenv import load_dotenv
+import pandas as pd
 import streamlit as st
 import telebot
 
+from categories_to_html import CategoryTree
 from db_action_handler import DBActionHandler
 from db_entities import Thought
 from rag import RAG
@@ -31,7 +33,16 @@ def load_category_classifier():
     return RAG()
 
 
+@st.cache_resource
+def load_category_tree():
+    category_tree = CategoryTree()
+    categories = pd.read_csv('data/category_paths.csv')['show_category'].tolist()
+    category_tree.parse_categories(categories)
+    return category_tree
+
+
 clf_category = load_category_classifier()
+tree = load_category_tree()
 
 
 def get_buttons(note_status):
@@ -121,6 +132,25 @@ def send_plots(message):
         )
 
 
+@bot.message_handler(commands=['tree'])
+def show_tree(message):
+    user = message.from_user
+    if user.username == ADMIN_USERNAME:
+        html_output = tree.generate_html_with_todos()
+        with open('output_collapsible.html', mode='w', encoding='utf-8') as file:
+            file.write(html_output)
+        bot.send_document(
+            user.id,
+            open('output_collapsible.html', 'rb'),
+            reply_markup=default_keyboard,
+        )
+    else:
+        bot.send_message(
+            user.id,
+            f"You are not authorized to use this bot. Please contact @{ADMIN_USERNAME} to get access.",
+        )
+
+
 def get_note_category(message):
     return clf_category.predict(message.text)["category"]
 
@@ -167,6 +197,7 @@ def get_text_messages(message):
         response_message_text: str = format_response_message(message, label, urgency, eta)
         response_message = bot.send_message(user.id, response_message_text, reply_markup=get_buttons(status), parse_mode='HTML')
         handle_note_creation(message.text, label, urgency, eta, response_message.message_id, status)
+        tree.add_todo_to_category(label, message.text)
     elif category_editing and user.username == ADMIN_USERNAME:
         global editing_message_id
         action_handler.update_note_category(editing_message_id, message.text)
