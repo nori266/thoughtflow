@@ -17,7 +17,7 @@ LOGGER.setLevel(logging.INFO)
 
 class RAG:
     def __init__(self):
-        self.model_name = "orca2:13b"  # orca2 is best
+        self.model_name = "mistral"  # orca2 is best
         self.llm = Ollama(model=self.model_name)  # TODO switch to deepinfra llama. Is there orca in deepinfra?
         embedding_function = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")  # TODO experiment with other embeddings
         self.db_action_handler = DBActionHandler()
@@ -74,22 +74,35 @@ class RAG:
         LOGGER.info(whole_prompt)
         llm_output = self.llm(whole_prompt)
         LOGGER.info(f"llm output: {llm_output}")
-        return self.post_process_prediction(llm_output, message)
-
-    def post_process_prediction(self, prediction_text: str, message: str) -> Dict[str, Union[str, float]]:
-        if self.model_name.startswith("orca"):
-            output_markers = ["### Final answer:", "Output:"]
-        else:  # Llama2
-            output_markers = [message]
+        llm_output_post_processed = self.post_process_prediction(llm_output, message)
+        LOGGER.info(f"llm output post processed: {llm_output_post_processed}")
+        most_similar_existing_category = self.db.similarity_search(llm_output_post_processed, k=1)[0].page_content
+        LOGGER.info(f"Most similar existing category: {most_similar_existing_category}")
         return {
-            "category": extract_trigger_phrases(prediction_text, output_markers),
+            "category": most_similar_existing_category,
         }
 
+    def post_process_prediction(self, prediction_text: str, message: str) -> str:
+        if self.model_name.startswith("orca"):
+            output_markers = ["### Final answer:", "Output:"]
+            return extract_category_from_orca_output(prediction_text, output_markers)
+        else:  # Llama2 or Mistral
+            output_markers = ["Category:", "Output:"]
+            return extract_category_from_llm_output(prediction_text, output_markers)
 
-def extract_trigger_phrases(text: str, triggers: List[str]) -> str:
+
+def extract_category_from_orca_output(text: str, triggers: List[str]) -> str:
     trigger_regex = '|'.join(map(re.escape, triggers))
     pattern = rf'({trigger_regex})(.*?)(?:\n|\.|$)'
     matches = re.findall(pattern, text, re.IGNORECASE)
     if matches:
         return matches[-1][1].strip()
+    return text
+
+
+def extract_category_from_llm_output(text: str, triggers: List[str]) -> str:
+    trigger_regex = '|'.join(map(re.escape, triggers))
+    pattern = re.compile(rf'({trigger_regex})?\s*(.+?)(?:^[A-Za-z\s>,-]+|$)')
+    if pattern.match(text.strip()):
+        return pattern.match(text.strip()).group(2).strip()
     return text
