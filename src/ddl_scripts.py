@@ -87,6 +87,15 @@ class DB_DDL:
             logger.error(f"Error renaming column: {e}")
             raise
 
+    def map_labels(self):
+        df = pd.read_csv('data/category_paths.csv')
+        mapping_dict = pd.Series(df.show_category.values, index=df.semantic_category).to_dict()
+        for thought in self.session.query(Thought).all():
+            if thought.label in mapping_dict:
+                thought.label = mapping_dict[thought.label]
+
+        self.session.commit()
+
     @staticmethod
     def get_session():
         # TODO move to utils so that it can be reused in db_action_handler
@@ -137,6 +146,7 @@ if __name__ == '__main__':
     #     print("Invalid input. Please type 'yes' or 'no'.")
 
     db_ddl = DB_DDL()
-    db_ddl.create_table_from_model(Thought)  # Seems to work
+    # db_ddl.create_table_from_model(Thought)  # Seems to work
     # db_ddl.add_column(Thought, 'message_id', Integer)
-    db_ddl.rename_column(Thought, 'thought', 'note_text')
+    # db_ddl.rename_column(Thought, 'thought', 'note_text')
+    db_ddl.map_labels()
