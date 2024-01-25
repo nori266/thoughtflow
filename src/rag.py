@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 import re
 from typing import List, Dict, Union
 
@@ -43,11 +44,13 @@ class RAG:
             vectorstore_cls=Chroma,
             k=5
         )
-        # TODO check if db exists
-        # self.db = Chroma.from_texts(categories, embedding_function, persist_directory="./chroma_categories")
-
-        # load from disk
-        self.db = Chroma(persist_directory="./chroma_categories", embedding_function=embedding_function)
+        # Load the vector store
+        db_directory = Path("./chroma_categories")
+        if db_directory.exists():
+            self.db = Chroma(persist_directory=str(db_directory), embedding_function=embedding_function)
+        else:
+            db_directory.mkdir(parents=True, exist_ok=True)
+            self.db = Chroma.from_texts(categories, embedding_function, persist_directory=str(db_directory))
 
         prefix = (
             "I want you to categorize my todo notes according to high-level goals and corresponding activities. "
@@ -67,7 +70,6 @@ class RAG:
         )
 
     def predict(self, message: str) -> Dict[str, Union[str, float]]:
-        # TODO why are there duplicates in sim search results?
         candidate_categories = {doc.page_content for doc in self.db.similarity_search(message, k=20)}
         candidate_categories_text = "\n".join(candidate_categories)
         whole_prompt = self.similar_prompt.format(note=message, candidate_categories=candidate_categories_text)
