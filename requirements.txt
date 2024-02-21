@@ -10,5 +10,6 @@ protobuf==3.20.3
 pytelegrambotapi==4.9.0
 python-dotenv==0.21.0
 scikit-learn==1.2.1
+sentence-transformers==2.2.2
 SQLAlchemy==1.4.46
 streamlit==1.18.1
