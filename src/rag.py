@@ -8,7 +8,6 @@ from langchain.llms import Ollama, DeepInfra
 from langchain.prompts import PromptTemplate, FewShotPromptTemplate
 from langchain.prompts.example_selector import SemanticSimilarityExampleSelector
 from langchain.vectorstores import Chroma
-import pandas as pd
 
 from db_action_handler import DBActionHandler
 
@@ -32,8 +31,7 @@ class RAG:
 
         # Load data and categories
         self.data = self.db_action_handler.get_all_notes()  # TODO just store data in vectors
-        with open("data/category_paths.csv") as f:
-            categories = pd.read_csv('data/category_paths.csv').show_category.tolist()
+        categories = self.db_action_handler.get_all_categories()
 
         self.examples = [
             {

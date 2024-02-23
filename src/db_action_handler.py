@@ -125,6 +125,13 @@ class DBActionHandler:
         except Exception as e:
             logger.error(e)
 
+    def get_all_categories(self):
+        try:
+            categories = self.session.query(Thought.label).distinct().all()
+            return categories
+        except Exception as e:
+            logger.error(e)
+
     @staticmethod
     def get_session():
         url = os.getenv("DB_URL")
