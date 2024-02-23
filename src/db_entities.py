@@ -42,3 +42,13 @@ class User(Base):
     def __repr__(self):
         return f"<User(username={self.username}, password={self.password}, email={self.email}, " \
                f"is_admin={self.is_admin})>"
+
+
+class Category(Base):
+    __tablename__ = 'category'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    show_category = Column(String(512))
+    semantic_category = Column(String(512))
+
+    def __repr__(self):
+        return f"<Category(show_category={self.show_category})>"

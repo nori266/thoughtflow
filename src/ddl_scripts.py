@@ -13,7 +13,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy import Integer
 from tqdm import tqdm
 
-from db_entities import Thought
+from db_entities import Thought, Category
 
 
 load_dotenv()
@@ -66,6 +66,22 @@ class DB_DDL:
                     date_completed=row['date_completed']
                 )
                 self.session.add(thought)
+            self.session.commit()
+        except Exception as e:
+            logger.error(e)
+
+    def add_categories_from_csv(self, csv_file):
+        try:
+            df = pd.read_csv(csv_file, na_values='none')
+            # replace Nan with None
+            df = df.where(pd.notnull(df), None)
+            df = df.fillna(np.nan).astype(object).replace({np.nan: None})
+            for _, row in tqdm(df.iterrows(), total=len(df)):
+                category = Category(
+                    show_category=row['show_category'],
+                    semantic_category=row['semantic_category']
+                )
+                self.session.add(category)
             self.session.commit()
         except Exception as e:
             logger.error(e)
@@ -132,6 +148,7 @@ def reload_data(csv_file):
 
 
 if __name__ == '__main__':
+    # TODO create a function for this:
     # ask the user if they want to reload the data from the csv file
     # reload = input("Do you want to reload the data from the csv file? "
     #                "This will remove all current data in the database! (yes/no): ")
@@ -146,7 +163,5 @@ if __name__ == '__main__':
     #     print("Invalid input. Please type 'yes' or 'no'.")
 
     db_ddl = DB_DDL()
-    # db_ddl.create_table_from_model(Thought)  # Seems to work
-    # db_ddl.add_column(Thought, 'message_id', Integer)
-    # db_ddl.rename_column(Thought, 'thought', 'note_text')
-    db_ddl.map_labels()
+    db_ddl.create_table_from_model(Category)
+    db_ddl.add_categories_from_csv('data/category_paths.csv')
