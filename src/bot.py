@@ -2,7 +2,6 @@ from os import environ
 from typing import Optional
 
 from dotenv import load_dotenv
-import pandas as pd
 import streamlit as st
 import telebot
 
@@ -36,7 +35,7 @@ def load_category_classifier():
 @st.cache_resource
 def load_category_tree():
     category_tree = CategoryTree()
-    categories = pd.read_csv('data/category_paths.csv')['show_category'].tolist()
+    categories = action_handler.get_all_categories()
     category_tree.parse_categories(categories)
     return category_tree
 

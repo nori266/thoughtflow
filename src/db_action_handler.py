@@ -128,7 +128,7 @@ class DBActionHandler:
     def get_all_categories(self):
         try:
             categories = self.session.query(Thought.label).distinct().all()
-            return categories
+            return [str(category[0]) for category in categories]
         except Exception as e:
             logger.error(e)
 
