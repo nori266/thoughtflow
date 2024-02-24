@@ -1,5 +1,5 @@
 altair==4.0
-chromadb==0.4.19
+chromadb==0.4.3
 langchain==0.0.348
 matplotlib==3.6.3
 mysql-connector-python==8.0.32
