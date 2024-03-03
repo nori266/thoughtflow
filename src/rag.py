@@ -75,7 +75,10 @@ class RAG:
         )
 
     def predict(self, message: str) -> Dict[str, Union[str, float]]:
-        candidate_categories = {doc.page_content for doc in self.db.similarity_search(message, k=20)}
+        # Returns twice the same category, that's why there's a set: if k=40, it returns 20
+        candidate_categories = deduplicate_with_order_preservation(
+            [doc.page_content for doc in self.db.similarity_search(message, k=40)]
+        )
         candidate_categories_text = "\n".join(candidate_categories)
         whole_prompt = self.similar_prompt.format(note=message, candidate_categories=candidate_categories_text)
         LOGGER.info(whole_prompt)
@@ -83,10 +86,19 @@ class RAG:
         LOGGER.info(f"llm output: {llm_output}")
         llm_output_post_processed = self.post_process_prediction(llm_output, message)
         LOGGER.info(f"llm output post processed: {llm_output_post_processed}")
-        most_similar_existing_category = self.db.similarity_search(llm_output_post_processed, k=1)[0].page_content
+        most_similar_existing_categories = [
+            doc.page_content for doc in self.db.similarity_search(llm_output_post_processed, k=3)
+        ]
+        most_similar_existing_category = most_similar_existing_categories[0]
         LOGGER.info(f"Most similar existing category: {most_similar_existing_category}")
+        # Combine the most similar existing category with the candidate categories
+        # to manage two sources of possible errors
+        categories_for_user_selection = set(most_similar_existing_categories + candidate_categories[:3])
+        print("most_similar_existing_categories: ", most_similar_existing_categories)
+        print("categories_for_user_selection: ", categories_for_user_selection)
         return {
             "category": most_similar_existing_category,
+            "categories_for_user_selection": categories_for_user_selection,
         }
 
     def post_process_prediction(self, prediction_text: str, message: str) -> str:
@@ -113,3 +125,9 @@ def extract_category_from_llm_output(text: str, triggers: List[str]) -> str:
     if pattern.match(text.strip()):
         return pattern.match(text.strip()).group(2).strip()
     return text
+
+
+def deduplicate_with_order_preservation(seq):
+    seen = set()
+    seen_add = seen.add
+    return [x for x in seq if not (x in seen or seen_add(x))]
