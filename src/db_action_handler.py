@@ -29,6 +29,13 @@ class DBActionHandler:
         except Exception as e:
             logger.error(e)
 
+    def get_note_by_message_id(self, message_id: int) -> Thought:
+        try:
+            thought = self.session.query(Thought).filter(Thought.message_id == message_id).first()
+            return thought
+        except Exception as e:
+            logger.error(e)
+
     def get_random_note(self) -> Thought:
         try:
             # return a random note which status is not "done"
@@ -49,14 +56,14 @@ class DBActionHandler:
         except Exception as e:
             logger.error("Error updating note status", e)
 
-    def update_note_category(self, message_id: Optional[int], category: str):
-        if message_id is None:
-            return
+    def update_note_category(self, message_id: Optional[int], category: str) -> Thought:
+        # Assumes that the new category comes from telegram and message_id is not None
         try:
             thought = self.session.query(Thought).filter(Thought.message_id == message_id).first()
             if category != thought.label:
                 thought.label = category
                 self.session.commit()
+            return thought
         except Exception as e:
             logger.error(e)
 
