@@ -158,11 +158,11 @@ def get_note_category(message):
     return clf_category.predict(message.text)["category"]
 
 
-def format_response_message(message, label, urgency, eta=None) -> str:
+def format_response_message(note_text, label, urgency, eta=None) -> str:
     label_text = telebot.formatting.hbold(label)
     urgency_text = telebot.formatting.hbold(urgency)
     # TODO take text instead of message as an argument, or better take a Thought object
-    response_message = f"Note: \"{message.text}\"\nCategory: {label_text}\nUrgency: {urgency_text}\n"
+    response_message = f"Note: \"{note_text}\"\nCategory: {label_text}\nUrgency: {urgency_text}\n"
     if eta is not None:
         float_eta = float(eta)
         hours = int(float_eta)
@@ -197,17 +197,27 @@ def get_text_messages(message):
         status = "open"
         urgency = 'week'
         eta = 0.5
-        response_message_text: str = format_response_message(message, label, urgency, eta)
+        response_message_text: str = format_response_message(message.text, label, urgency, eta)
         response_message = bot.send_message(user.id, response_message_text, reply_markup=get_buttons(status), parse_mode='HTML')
         handle_note_creation(message.text, label, urgency, eta, response_message.message_id, status)
         tree.add_todo_to_category(label, message.text)
     elif category_editing and user.username == ADMIN_USERNAME:
         global editing_message_id
-        action_handler.update_note_category(editing_message_id, message.text)
+        updated_note = action_handler.update_note_category(editing_message_id, message.text)
         bot.send_message(
             user.id,
-            f"Category updated to '{message.text}'.",
+            f'Category of the note "{updated_note.note_text}" updated to "{updated_note.label}".',
             reply_markup=default_keyboard,
+        )
+        edited_response_message_text: str = format_response_message(
+            updated_note.note_text, updated_note.label, updated_note.urgency, updated_note.eta
+        )
+        bot.edit_message_text(
+            edited_response_message_text,
+            user.id,
+            editing_message_id,
+            reply_markup=get_buttons(updated_note.status),
+            parse_mode='HTML'
         )
         category_editing = False
         editing_message_id = None
