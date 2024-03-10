@@ -106,12 +106,14 @@ def send_last_n_notes(message):
 
 @bot.message_handler(commands=['new'])
 def add_new_note(message):
-    # doesn't do anything but just invites to send a new note and sets the state to True
+    # Invites to send a new note and sets category_editing to False
+    global category_editing
+    category_editing = False
     user = message.from_user
     if user.username == ADMIN_USERNAME:
         bot.send_message(
             user.id,
-            f"Please send me a new thought to add to your pull.",
+            f"Please send me a new note to save.",
             reply_markup=default_keyboard,
         )
     else:
@@ -260,11 +262,42 @@ def button_edit_category(call):
     global editing_message_id
     category_editing = True
     editing_message_id = call.message.message_id
+    candidate_categories = ["AI Progress", "Chores", "Beauty > Hair and skin care", "Note", "Plan"]
+    buttons = [
+        telebot.types.KeyboardButton(category) for category in candidate_categories
+    ]
+    keyboard = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
+    keyboard.add(*buttons)
     bot.send_message(
         call.message.chat.id,
-        f"Enter new category:",
+        "Choose a new category:",
+        reply_markup=keyboard,
+    )
+
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith('#category_'))
+def button_edit_category(call):
+    global category_editing
+    global editing_message_id
+    new_category = call.data.split('_')[1]
+    updated_note = action_handler.update_note_category(editing_message_id, new_category)
+    bot.send_message(
+        call.message.chat.id,
+        f'Category of the note "{updated_note.note_text}" updated to "{updated_note.label}".',
         reply_markup=default_keyboard,
     )
+    edited_response_message_text: str = format_response_message(
+        updated_note.note_text, updated_note.label, updated_note.urgency, updated_note.eta
+    )
+    bot.edit_message_text(
+        edited_response_message_text,
+        call.message.chat.id,
+        editing_message_id,
+        reply_markup=get_buttons(updated_note.status),
+        parse_mode='HTML'
+    )
+    category_editing = False
+    editing_message_id = None
 
 
 def get_new_note_status(callback_data: str):
