@@ -1,6 +1,9 @@
-__import__('pysqlite3')
-import sys
-sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+import platform
+# Workaround for the issue with sqlite3 in streamlit share
+if platform.system() != 'Darwin':
+    __import__('pysqlite3')
+    import sys
+    sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 
 from os import environ
 from typing import Optional
@@ -238,16 +241,16 @@ def button_update_status(call):
     note = action_handler.update_note_status(message_id, new_status)
     bot.send_message(
         call.message.chat.id,
-        f"Status updated to {note.status}.",
+        f'Status of the note "{note.note_text}" updated to "{note.status}".',
         reply_markup=default_keyboard,
     )
-    # TODO: same formatting as in the message handler
+    response_message_text: str = format_response_message(note.note_text, note.label, note.urgency, note.eta)
     bot.edit_message_text(
-        f"Note: {note.note_text},\nCategory: {note.label},\nUrgency: {note.urgency},\n"
-        f"ETA: {note.eta},\nStatus: {note.status}",
+        response_message_text,
         call.message.chat.id,
         message_id,
-        reply_markup=get_buttons(note.status)
+        reply_markup=get_buttons(note.status),
+        parse_mode='HTML'
     )
 
 
