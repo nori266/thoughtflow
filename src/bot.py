@@ -51,18 +51,18 @@ clf_category = load_category_classifier()
 tree = load_category_tree()
 
 
-def get_buttons(note_status):
+def get_response_buttons(note_status):
     # TODO add mapping of statuses to button names
     # FIXME: show all the buttons except the one with the current status
     if note_status == 'in_progress':
-        itembtn2 = telebot.types.InlineKeyboardButton('Done', callback_data='#done')
+        itembtn2 = telebot.types.InlineKeyboardButton('✅Done', callback_data='#done')
     else:
-        itembtn2 = telebot.types.InlineKeyboardButton('Working on it', callback_data='#in_progress')
+        itembtn2 = telebot.types.InlineKeyboardButton('👩🏻‍💻Working on it', callback_data='#in_progress')
 
-    markup = telebot.types.InlineKeyboardMarkup()
-    itembtn1 = telebot.types.InlineKeyboardButton('Send me later', callback_data='#later')
-    itembtn3 = telebot.types.InlineKeyboardButton('Not relevant', callback_data='#not_relevant')
-    itembtn4 = telebot.types.InlineKeyboardButton('Edit category', callback_data='#edit_category')
+    markup = telebot.types.InlineKeyboardMarkup(row_width=2)
+    itembtn1 = telebot.types.InlineKeyboardButton('⏳Send me later', callback_data='#later')
+    itembtn3 = telebot.types.InlineKeyboardButton('🚫Not relevant', callback_data='#not_relevant')
+    itembtn4 = telebot.types.InlineKeyboardButton('🌿Edit category', callback_data='#edit_category')
     markup.add(itembtn1, itembtn2, itembtn3, itembtn4)
     return markup
 
@@ -76,7 +76,7 @@ def send_random_note(message):
         bot.send_message(
             user.id,
             f"Random thought from your pull: \n{random_note}",  # TODO format the message
-            reply_markup=get_buttons(random_note.status),
+            reply_markup=get_response_buttons(random_note.status),
         )
     else:
         bot.send_message(
@@ -95,7 +95,7 @@ def send_last_n_notes(message):
             bot.send_message(
                 user.id,
                 thought.note_text,
-                reply_markup=get_buttons(thought.status),
+                reply_markup=get_response_buttons(thought.status),
             )
     else:
         bot.send_message(
@@ -203,7 +203,7 @@ def get_text_messages(message):
         urgency = 'week'
         eta = 0.5
         response_message_text: str = format_response_message(message.text, label, urgency, eta)
-        response_message = bot.send_message(user.id, response_message_text, reply_markup=get_buttons(status), parse_mode='HTML')
+        response_message = bot.send_message(user.id, response_message_text, reply_markup=get_response_buttons(status), parse_mode='HTML')
         handle_note_creation(message.text, label, urgency, eta, response_message.message_id, status)
         tree.add_todo_to_category(label, message.text)
     elif category_editing and user.username == ADMIN_USERNAME:
@@ -221,7 +221,7 @@ def get_text_messages(message):
             edited_response_message_text,
             user.id,
             editing_message_id,
-            reply_markup=get_buttons(updated_note.status),
+            reply_markup=get_response_buttons(updated_note.status),
             parse_mode='HTML'
         )
         category_editing = False
@@ -251,7 +251,7 @@ def button_update_status(call):
         response_message_text,
         call.message.chat.id,
         message_id,
-        reply_markup=get_buttons(note.status),
+        reply_markup=get_response_buttons(note.status),
         parse_mode='HTML'
     )
 
@@ -270,7 +270,7 @@ def button_edit_category(call):
     keyboard.add(*buttons)
     bot.send_message(
         call.message.chat.id,
-        "Choose a new category:",
+        "Choose a new category from the list or type a new one:",
         reply_markup=keyboard,
     )
 
@@ -293,7 +293,7 @@ def button_edit_category(call):
         edited_response_message_text,
         call.message.chat.id,
         editing_message_id,
-        reply_markup=get_buttons(updated_note.status),
+        reply_markup=get_response_buttons(updated_note.status),
         parse_mode='HTML'
     )
     category_editing = False
