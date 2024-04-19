@@ -19,7 +19,7 @@ class RAG:
     def __init__(self):
         self.model_name = "mistral"  # orca2 is best
         # self.llm = Ollama(model=self.model_name)
-        self.llm = DeepInfra(model_id="mistralai/Mixtral-8x7B-Instruct-v0.1")
+        self.llm = DeepInfra(model_id="meta-llama/Meta-Llama-3-70B-Instruct")
         self.llm.model_kwargs = {
             "temperature": 0.5,
             "repetition_penalty": 1.2,
