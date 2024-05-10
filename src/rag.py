@@ -18,14 +18,14 @@ LOGGER.setLevel(logging.INFO)
 class RAG:
     def __init__(self):
         self.model_name = "mistral"  # orca2 is best
-        # self.llm = Ollama(model=self.model_name)
-        self.llm = DeepInfra(model_id="mistralai/Mixtral-8x7B-Instruct-v0.1")
-        self.llm.model_kwargs = {
-            "temperature": 0.5,
-            "repetition_penalty": 1.2,
-            "max_new_tokens": 250,
-            "top_p": 0.9,
-        }
+        self.llm = Ollama(model=self.model_name)
+        # self.llm = DeepInfra(model_id="mistralai/Mixtral-8x7B-Instruct-v0.1")
+        # self.llm.model_kwargs = {
+        #     "temperature": 0.5,
+        #     "repetition_penalty": 1.2,
+        #     "max_new_tokens": 250,
+        #     "top_p": 0.9,
+        # }
         embedding_function = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")  # TODO experiment with other embeddings
         self.db_action_handler = DBActionHandler()
 
@@ -93,13 +93,26 @@ class RAG:
         LOGGER.info(f"Most similar existing category: {most_similar_existing_category}")
         # Combine the most similar existing category with the candidate categories
         # to manage two sources of possible errors
-        categories_for_user_selection = set(most_similar_existing_categories + candidate_categories[:3])
+        categories_for_user_selection = self.get_categories_for_user_selection(
+            most_similar_existing_categories, candidate_categories, llm_output_post_processed
+        )
+
         print("most_similar_existing_categories: ", most_similar_existing_categories)
         print("categories_for_user_selection: ", categories_for_user_selection)
         return {
             "category": most_similar_existing_category,
             "categories_for_user_selection": categories_for_user_selection,
         }
+
+    def get_categories_for_user_selection(
+            self, most_similar_existing_categories,
+            candidate_categories,
+            llm_output_post_processed
+    ) -> set:
+        categories_for_user_selection = set(
+            most_similar_existing_categories + candidate_categories[:3] + ["Note", llm_output_post_processed]
+        )
+        return categories_for_user_selection
 
     def post_process_prediction(self, prediction_text: str, message: str) -> str:
         if self.model_name.startswith("orca"):

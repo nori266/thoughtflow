@@ -28,6 +28,7 @@ action_handler = DBActionHandler()
 """Global variables"""
 category_editing = False
 editing_message_id: Optional[int] = None
+candidate_categories = ["AI Progress", "Chores", "Beauty > Hair and skin care", "Note", "Plan"]
 
 default_prompt = "Please use /new command to add new thought to your pull " \
                  "or /random to get a random thought from your pull."
@@ -160,7 +161,7 @@ def show_tree(message):
 
 
 def get_note_category(message):
-    return clf_category.predict(message.text)["category"]
+    return clf_category.predict(message.text)
 
 
 def format_response_message(note_text, label, urgency, eta=None) -> str:
@@ -195,10 +196,13 @@ def handle_note_creation(note_text, label, urgency, eta, message_id, status):
 @bot.message_handler(content_types=['text'])
 def get_text_messages(message):
     global category_editing
+    global candidate_categories
     user = message.from_user
 
     if not category_editing and user.username == ADMIN_USERNAME:
-        label = get_note_category(message)
+        model_prediction = get_note_category(message)
+        label = model_prediction['category']
+        candidate_categories = model_prediction['categories_for_user_selection']
         status = "open"
         urgency = 'week'
         eta = 0.5
@@ -260,9 +264,9 @@ def button_update_status(call):
 def button_edit_category(call):
     global category_editing
     global editing_message_id
+    global candidate_categories
     category_editing = True
     editing_message_id = call.message.message_id
-    candidate_categories = ["AI Progress", "Chores", "Beauty > Hair and skin care", "Note", "Plan"]
     buttons = [
         telebot.types.KeyboardButton(category) for category in candidate_categories
     ]
@@ -275,29 +279,29 @@ def button_edit_category(call):
     )
 
 
-@bot.callback_query_handler(func=lambda call: call.data.startswith('#category_'))
-def button_edit_category(call):
-    global category_editing
-    global editing_message_id
-    new_category = call.data.split('_')[1]
-    updated_note = action_handler.update_note_category(editing_message_id, new_category)
-    bot.send_message(
-        call.message.chat.id,
-        f'Category of the note "{updated_note.note_text}" updated to "{updated_note.label}".',
-        reply_markup=default_keyboard,
-    )
-    edited_response_message_text: str = format_response_message(
-        updated_note.note_text, updated_note.label, updated_note.urgency, updated_note.eta
-    )
-    bot.edit_message_text(
-        edited_response_message_text,
-        call.message.chat.id,
-        editing_message_id,
-        reply_markup=get_response_buttons(updated_note.status),
-        parse_mode='HTML'
-    )
-    category_editing = False
-    editing_message_id = None
+# @bot.callback_query_handler(func=lambda call: call.data.startswith('#category_'))
+# def button_edit_category(call):
+#     global category_editing
+#     global editing_message_id
+#     new_category = call.data.split('_')[1]
+#     updated_note = action_handler.update_note_category(editing_message_id, new_category)
+#     bot.send_message(
+#         call.message.chat.id,
+#         f'Category of the note "{updated_note.note_text}" updated to "{updated_note.label}".',
+#         reply_markup=default_keyboard,
+#     )
+#     edited_response_message_text: str = format_response_message(
+#         updated_note.note_text, updated_note.label, updated_note.urgency, updated_note.eta
+#     )
+#     bot.edit_message_text(
+#         edited_response_message_text,
+#         call.message.chat.id,
+#         editing_message_id,
+#         reply_markup=get_response_buttons(updated_note.status),
+#         parse_mode='HTML'
+#     )
+#     category_editing = False
+#     editing_message_id = None
 
 
 def get_new_note_status(callback_data: str):
