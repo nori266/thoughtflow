@@ -212,22 +212,31 @@ def get_text_messages(message):
         tree.add_todo_to_category(label, message.text)
     elif category_editing and user.username == ADMIN_USERNAME:
         global editing_message_id
-        updated_note = action_handler.update_note_category(editing_message_id, message.text)
-        bot.send_message(
-            user.id,
-            f'Category of the note "{updated_note.note_text}" updated to "{updated_note.label}".',
-            reply_markup=default_keyboard,
-        )
-        edited_response_message_text: str = format_response_message(
-            updated_note.note_text, updated_note.label, updated_note.urgency, updated_note.eta
-        )
-        bot.edit_message_text(
-            edited_response_message_text,
-            user.id,
-            editing_message_id,
-            reply_markup=get_response_buttons(updated_note.status),
-            parse_mode='HTML'
-        )
+        # get category before editing
+        current_category = action_handler.get_note_by_message_id(editing_message_id).label
+        if message.text != current_category:
+            updated_note = action_handler.update_note_category(editing_message_id, message.text)
+            bot.send_message(
+                user.id,
+                f'Category of the note "{updated_note.note_text}" updated to "{updated_note.label}".',
+                reply_markup=default_keyboard,
+            )
+            edited_response_message_text: str = format_response_message(
+                updated_note.note_text, updated_note.label, updated_note.urgency, updated_note.eta
+            )
+            bot.edit_message_text(
+                edited_response_message_text,
+                user.id,
+                editing_message_id,
+                reply_markup=get_response_buttons(updated_note.status),
+                parse_mode='HTML'
+            )
+        else:
+            bot.send_message(
+                user.id,
+                f'Category of the note has not been changed.',
+                reply_markup=default_keyboard,
+            )
         category_editing = False
         editing_message_id = None
     else:
@@ -277,31 +286,6 @@ def button_edit_category(call):
         "Choose a new category from the list or type a new one:",
         reply_markup=keyboard,
     )
-
-
-# @bot.callback_query_handler(func=lambda call: call.data.startswith('#category_'))
-# def button_edit_category(call):
-#     global category_editing
-#     global editing_message_id
-#     new_category = call.data.split('_')[1]
-#     updated_note = action_handler.update_note_category(editing_message_id, new_category)
-#     bot.send_message(
-#         call.message.chat.id,
-#         f'Category of the note "{updated_note.note_text}" updated to "{updated_note.label}".',
-#         reply_markup=default_keyboard,
-#     )
-#     edited_response_message_text: str = format_response_message(
-#         updated_note.note_text, updated_note.label, updated_note.urgency, updated_note.eta
-#     )
-#     bot.edit_message_text(
-#         edited_response_message_text,
-#         call.message.chat.id,
-#         editing_message_id,
-#         reply_markup=get_response_buttons(updated_note.status),
-#         parse_mode='HTML'
-#     )
-#     category_editing = False
-#     editing_message_id = None
 
 
 def get_new_note_status(callback_data: str):
