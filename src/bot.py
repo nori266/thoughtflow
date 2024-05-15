@@ -212,9 +212,8 @@ def get_text_messages(message):
         tree.add_todo_to_category(label, message.text)
     elif category_editing and user.username == ADMIN_USERNAME:
         global editing_message_id
-        # get category before editing
         current_category = action_handler.get_note_by_message_id(editing_message_id).label
-        if message.text != current_category:
+        if message.text != '🚫 Cancel' and message.text != current_category:
             updated_note = action_handler.update_note_category(editing_message_id, message.text)
             bot.send_message(
                 user.id,
@@ -276,10 +275,10 @@ def button_edit_category(call):
     global candidate_categories
     category_editing = True
     editing_message_id = call.message.message_id
-    buttons = [
-        telebot.types.KeyboardButton(category) for category in candidate_categories
-    ]
     keyboard = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
+    row_width = 1  # number of buttons in each row
+    keyboard.row_width = row_width
+    buttons = [telebot.types.KeyboardButton(category) for category in candidate_categories] + [telebot.types.KeyboardButton('🚫 Cancel')]
     keyboard.add(*buttons)
     bot.send_message(
         call.message.chat.id,
