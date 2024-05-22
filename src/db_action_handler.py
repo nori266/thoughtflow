@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 import logging
 import os
 from typing import List, Optional
@@ -92,6 +93,16 @@ class DBActionHandler:
     def show_last_n(self, n=10):
         try:
             thoughts = self.session.query(Thought).order_by(Thought.id.desc()).limit(n).all()
+            return thoughts
+        except Exception as e:
+            logger.error(e)
+
+    def get_recent_notes(self, time_frame=10):
+        # get recent notes (last time_frame days) with the status "Open"
+        try:
+            start_date = datetime.now() - timedelta(days=time_frame)
+            thoughts = self.session.query(Thought).filter(Thought.date_created > start_date).filter(
+                Thought.status == "open").all()
             return thoughts
         except Exception as e:
             logger.error(e)

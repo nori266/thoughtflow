@@ -28,7 +28,8 @@ action_handler = DBActionHandler()
 """Global variables"""
 category_editing = False
 editing_message_id: Optional[int] = None
-candidate_categories = ["AI Progress", "Chores", "Beauty > Hair and skin care", "Note", "Plan"]
+candidate_categories = ["AI Progress", "Chores", "Beauty > Hair and skin care", "Note", "Plan"]  # default categories
+query_mode = False
 
 default_prompt = "Please use /new command to add new thought to your pull " \
                  "or /random to get a random thought from your pull."
@@ -36,7 +37,7 @@ default_keyboard = telebot.types.ReplyKeyboardRemove(selective=False)
 
 
 @st.cache_resource
-def load_category_classifier():
+def load_rag():
     return RAG()
 
 
@@ -48,7 +49,7 @@ def load_category_tree():
     return category_tree
 
 
-clf_category = load_category_classifier()
+rag = load_rag()
 tree = load_category_tree()
 
 
@@ -160,8 +161,28 @@ def show_tree(message):
         )
 
 
+@bot.message_handler(commands=['query'])
+def perform_query(message):
+    global category_editing
+    global query_mode
+    category_editing = False
+    query_mode = True
+    user = message.from_user
+    if user.username == ADMIN_USERNAME:
+        bot.send_message(
+            user.id,
+            f"Write a query to your notes.",
+            reply_markup=default_keyboard,
+        )
+    else:
+        bot.send_message(
+            user.id,
+            f"You are not authorized to use this bot. Please contact @{ADMIN_USERNAME} to get access.",
+        )
+
+
 def get_note_category(message):
-    return clf_category.predict(message.text)
+    return rag.predict(message.text)
 
 
 def format_response_message(note_text, label, urgency, eta=None) -> str:
@@ -197,9 +218,10 @@ def handle_note_creation(note_text, label, urgency, eta, message_id, status):
 def get_text_messages(message):
     global category_editing
     global candidate_categories
+    global query_mode
     user = message.from_user
 
-    if not category_editing and user.username == ADMIN_USERNAME:
+    if not category_editing and not query_mode and user.username == ADMIN_USERNAME:
         model_prediction = get_note_category(message)
         label = model_prediction['category']
         candidate_categories = model_prediction['categories_for_user_selection']
@@ -238,6 +260,15 @@ def get_text_messages(message):
             )
         category_editing = False
         editing_message_id = None
+    elif query_mode and user.username == ADMIN_USERNAME:
+        rag_output_notes = rag.perform_arbitrary_query(message.text)
+        for note in [rag_output_notes]:  # TODO: return real notes with buttons
+            bot.send_message(
+                user.id,
+                note,
+                reply_markup=default_keyboard,
+            )
+        query_mode = False
     else:
         bot.send_message(
             user.id,
@@ -285,6 +316,22 @@ def button_edit_category(call):
         "Choose a new category from the list or type a new one:",
         reply_markup=keyboard,
     )
+
+
+@bot.callback_query_handler(func=lambda call: call.data == '#query')
+def button_query(call):
+    user = call.from_user
+    if user.username == ADMIN_USERNAME:
+        bot.send_message(
+            user.id,
+            f"Write a query to your notes.",
+            reply_markup=default_keyboard,
+        )
+    else:
+        bot.send_message(
+            user.id,
+            f"You are not authorized to use this bot. Please contact @{ADMIN_USERNAME} to get access.",
+        )
 
 
 def get_new_note_status(callback_data: str):

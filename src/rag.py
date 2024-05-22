@@ -57,7 +57,7 @@ class RAG:
             db_directory.mkdir(parents=True, exist_ok=True)
             self.db = Chroma.from_texts(categories, embedding_function, persist_directory=str(db_directory))
 
-        prefix = (
+        prefix_categorize = (
             "I want you to categorize my todo notes according to high-level goals and corresponding activities. "
             "If the input note is not a todo, assign it a category 'Note'. If there's no suitable category you can "
             "create a new one or use a higher-level category going up in the tree. Answer with the category ONLY, the "
@@ -69,7 +69,7 @@ class RAG:
         self.similar_prompt = FewShotPromptTemplate(
             example_selector=self.example_selector,
             example_prompt=self.prompt,
-            prefix=prefix,
+            prefix=prefix_categorize,
             suffix="Input: {note}\n",
             input_variables=["note", "candidate_categories"]
         )
@@ -121,6 +121,31 @@ class RAG:
         else:  # Llama2 or Mistral
             output_markers = ["Category:", "Output:"]
             return extract_category_from_llm_output(prediction_text, output_markers)
+
+    def perform_arbitrary_query(self, query):
+        """
+        TODO:
+        - try with deepinfra
+        - (output a fixed amount of notes)
+        - get ids of the notes and output notes with buttons
+        - this should have access to categories, as some notes make sense only for me, and categories might contain some
+        feedback from me
+        - keep the comment from the LLM
+        :param query:
+        :return:
+        """
+        recent_thoughts = self.db_action_handler.get_recent_notes()
+        concat_recent_thoughts = "\n".join([
+            f"Note: '{thought.note_text}', Category: '{thought.label}'" for thought in recent_thoughts
+        ])
+        arbitrary_query_propmt = (
+            f"I want you to act as a smart search engine for my notes. Look at the following notes and respond with "
+            f"the most relevant note to the query. If there's no relevant note, respond with 'No relevant note'. "
+            f"Answer with the notes ONLY and nothing else. Here's the query: '{query}'\n\n"
+            f"Here are the notes:\n{concat_recent_thoughts}\n\n"
+        )
+        llm_output = self.llm(arbitrary_query_propmt)
+        return llm_output
 
 
 def extract_category_from_orca_output(text: str, triggers: List[str]) -> str:
