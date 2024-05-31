@@ -18,14 +18,14 @@ LOGGER.setLevel(logging.INFO)
 class RAG:
     def __init__(self):
         self.model_name = "mistral"  # orca2 is best
-        self.llm = Ollama(model=self.model_name)
-        # self.llm = DeepInfra(model_id="mistralai/Mixtral-8x7B-Instruct-v0.1")
-        # self.llm.model_kwargs = {
-        #     "temperature": 0.5,
-        #     "repetition_penalty": 1.2,
-        #     "max_new_tokens": 250,
-        #     "top_p": 0.9,
-        # }
+        # self.llm = Ollama(model=self.model_name)
+        self.llm = DeepInfra(model_id="mistralai/Mixtral-8x22B-Instruct-v0.1")
+        self.llm.model_kwargs = {
+            "temperature": 0.5,
+            "repetition_penalty": 1.2,
+            "max_new_tokens": 250,
+            "top_p": 0.9,
+        }
         embedding_function = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")  # TODO experiment with other embeddings
         self.db_action_handler = DBActionHandler()
 
