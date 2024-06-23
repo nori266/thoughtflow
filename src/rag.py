@@ -134,17 +134,22 @@ class RAG:
         :param query:
         :return:
         """
-        recent_thoughts = self.db_action_handler.get_recent_notes()
+        last_days = 60
+        recent_thoughts = self.db_action_handler.get_recent_notes(time_frame=last_days)
+        if not recent_thoughts:
+            return "No notes found in the last {} days.".format(last_days)
         concat_recent_thoughts = "\n".join([
             f"Note: '{thought.note_text}', Category: '{thought.label}'" for thought in recent_thoughts
         ])
-        arbitrary_query_propmt = (
-            f"I want you to act as a smart search engine for my notes. Look at the following notes and respond with "
-            f"the most relevant note to the query. If there's no relevant note, respond with 'No relevant note'. "
-            f"Answer with the notes ONLY and nothing else. Here's the query: '{query}'\n\n"
-            f"Here are the notes:\n{concat_recent_thoughts}\n\n"
-        )
-        llm_output = self.llm(arbitrary_query_propmt)
+        arbitrary_query_prompt = (
+            "Please review the following notes and respond with the most relevant ones to the provided query, "
+            "preserving the original formatting of the notes. "
+            "If there are no relevant notes, simply respond with 'No relevant notes'. "
+            "Respond only with the relevant notes. Here's the query: '{}'\n\n"
+            "Notes provided:\n{}\n\n"
+        ).format(query, concat_recent_thoughts)
+        LOGGER.debug(arbitrary_query_prompt)
+        llm_output = self.llm(arbitrary_query_prompt)
         return llm_output
 
 
