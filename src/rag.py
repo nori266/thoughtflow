@@ -110,7 +110,7 @@ class RAG:
             llm_output_post_processed
     ) -> set:
         categories_for_user_selection = set(
-            most_similar_existing_categories + candidate_categories[:3] + ["Note", llm_output_post_processed]
+            most_similar_existing_categories + candidate_categories[:3] + ["Note", "Plan"]
         )
         return categories_for_user_selection
 
